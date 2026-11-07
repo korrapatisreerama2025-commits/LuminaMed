@@ -1,0 +1,2665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="LuminaMed - Your personal medicine reminder & health tracker with precision alarms and inventory tracking.">
+  <meta name="theme-color" content="#f1f5fd">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>LuminaMed - Smart Medicine Reminder & Health Tracker</title>
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <link rel="stylesheet" href="styles.css?v=26">
+</head>
+<body>
+
+  <!-- ==============================================
+       PATIENT AUTHENTICATION & ONBOARDING GATEWAY
+       Required at startup so medical info is available for doctors & emergency care
+       ============================================== -->
+  <div id="patientAuthGateway" class="patient-auth-overlay" style="display: flex;">
+    <div class="patient-auth-container glass-card">
+      
+      <!-- Brand & Welcome Hero -->
+      <div class="auth-hero">
+        <div class="auth-logo-badge">
+          <i data-lucide="shield-plus"></i>
+        </div>
+        <div class="auth-hero-text">
+          <h2>Welcome to <span class="brand-accent">Lumina</span>Med</h2>
+          <p class="auth-hero-subtitle">Smart Medicine Reminders & Patient Care Portal</p>
+        </div>
+      </div>
+      <p class="auth-hero-desc">
+        To ensure accurate medicine tracking and enable one-tap clinical report sharing with your doctor, please verify your patient identity.
+      </p>
+
+      <!-- VIEW 1: SIGN IN (Phone or Google) -->
+      <div id="authStepSignIn" class="auth-step-panel">
+        
+        <!-- Returning Patient Quick Unlock Box (Shown if saved patient profile exists in localStorage) -->
+        <div id="returningPatientCard" class="glass-card returning-patient-box" style="display: none; margin-bottom: 20px; padding: 14px 18px; border: 1.5px solid rgba(6, 182, 212, 0.4); background: rgba(6, 182, 212, 0.08); border-radius: var(--radius-md);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div class="patient-pill-avatar" id="returningPatientAvatar" style="width: 44px; height: 44px; font-size: 15px; background: linear-gradient(135deg, var(--cyan), var(--blue)); color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-weight: 700;">AJ</div>
+              <div>
+                <div style="font-size: 11px; font-weight: 700; color: var(--cyan); text-transform: uppercase; letter-spacing: 0.5px;">Saved Patient Profile</div>
+                <h4 id="returningPatientName" style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 2px 0;">Alex Johnson</h4>
+                <span id="returningPatientMeta" class="form-hint" style="font-size: 12px; opacity: 0.85;">🩸 O+ &bull; +91 98765 43210</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-primary btn-sm glow-btn" onclick="luminaApp.unlockSavedPatientSession()" style="padding: 8px 16px; font-weight: 600;">
+                <i data-lucide="log-in"></i> Sign In As Saved Patient
+              </button>
+              <button type="button" class="btn btn-glass-secondary btn-sm" onclick="luminaApp.startNewPatientRegistration()" style="padding: 8px 12px; font-size: 12px;" title="Register or sign in as a new patient with zero medicines">
+                <i data-lucide="user-plus"></i> New Patient Sign In
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Auth Method Selector Tabs -->
+        <div class="auth-tabs">
+          <button type="button" class="auth-tab-btn active" id="authTabPhoneBtn" onclick="luminaApp.switchAuthTab('phone')">
+            <i data-lucide="phone"></i>
+            <span>Mobile Number</span>
+          </button>
+          <button type="button" class="auth-tab-btn" id="authTabGoogleBtn" onclick="luminaApp.switchAuthTab('google')">
+            <svg class="google-icon-svg" viewBox="0 0 24 24" width="16" height="16">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Google Account</span>
+          </button>
+        </div>
+
+        <!-- Phone Login Section -->
+        <div id="phoneAuthSection" class="auth-method-content">
+          <form id="phoneLoginForm" onsubmit="event.preventDefault(); luminaApp.handlePhoneRequestOtp();">
+            <div class="form-group">
+              <label class="form-label" for="loginPhoneInput">Enter Your Mobile Phone Number</label>
+              <div class="phone-input-row">
+                <select id="loginCountryCode" class="glass-select country-code-select">
+                  <option value="+91" selected>🇮🇳 +91 (India)</option>
+                  <option value="+1">🇺🇸 +1 (USA / Canada)</option>
+                  <option value="+44">🇬🇧 +44 (UK)</option>
+                  <option value="+61">🇦🇺 +61 (Australia)</option>
+                  <option value="+971">🇦🇪 +971 (UAE)</option>
+                  <option value="+65">🇸🇬 +65 (Singapore)</option>
+                  <option value="+49">🇩🇪 +49 (Germany)</option>
+                </select>
+                <div class="phone-number-wrap">
+                  <i data-lucide="phone" class="input-icon-left"></i>
+                  <input type="tel" id="loginPhoneInput" class="glass-input phone-input" placeholder="98765 43210" maxlength="14" required>
+                </div>
+              </div>
+              <span class="form-hint">A 4-digit verification code (OTP) will be generated to verify your patient contact.</span>
+            </div>
+
+            <!-- OTP Step (Initially Hidden) -->
+            <div id="otpVerificationBox" class="otp-verification-box" style="display: none;">
+              <div class="otp-header-info">
+                <div class="otp-badge"><i data-lucide="key-round"></i></div>
+                <div>
+                  <h4>Enter 4-Digit Security Code</h4>
+                  <p id="otpPhoneSentNotice">Code sent to +91 98765 43210</p>
+                </div>
+              </div>
+
+              <!-- 4-Digit Inputs -->
+              <div class="otp-inputs-row">
+                <input type="text" class="otp-digit" maxlength="1" id="otpDigit1" inputmode="numeric" autocomplete="one-time-code">
+                <input type="text" class="otp-digit" maxlength="1" id="otpDigit2" inputmode="numeric">
+                <input type="text" class="otp-digit" maxlength="1" id="otpDigit3" inputmode="numeric">
+                <input type="text" class="otp-digit" maxlength="1" id="otpDigit4" inputmode="numeric">
+              </div>
+
+              <div class="otp-helpers-row">
+                <button type="button" class="btn-demo-autofill" onclick="luminaApp.autofillDemoOtp()">
+                  <i data-lucide="sparkles"></i> Auto-fill Demo OTP (<span id="demoOtpCodeDisplay">4829</span>)
+                </button>
+                <div class="otp-resend-wrap">
+                  <span id="otpCountdownText">Resend in 30s</span>
+                  <button type="button" id="resendOtpBtn" class="btn-link" style="display: none;" onclick="luminaApp.handlePhoneRequestOtp(true)">Resend OTP</button>
+                </div>
+              </div>
+
+              <button type="button" id="verifyOtpBtn" class="btn btn-primary glow-btn btn-block" onclick="luminaApp.verifyPhoneOtp()">
+                <i data-lucide="check-circle-2"></i> Verify & Continue
+              </button>
+            </div>
+
+            <div id="sendOtpActionRow">
+              <button type="submit" id="sendOtpBtn" class="btn btn-primary glow-btn btn-block">
+                <i data-lucide="send"></i> Get Verification Code (OTP)
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Google Login Section -->
+        <div id="googleAuthSection" class="auth-method-content" style="display: none;">
+          <div class="google-auth-box">
+            <p class="google-auth-info">Sign in securely with your Google Account to automatically sync your profile name and email.</p>
+            
+            <button type="button" class="btn-google-sign-in" onclick="luminaApp.triggerGoogleSignIn()">
+              <svg class="google-icon-svg" viewBox="0 0 24 24" width="20" height="20">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+
+            <!-- Quick Account Selector Simulation -->
+            <div class="google-accounts-picker">
+              <span class="picker-caption">Or choose a pre-configured patient profile:</span>
+              <div class="account-item" onclick="luminaApp.loginWithPredefinedGoogle('Alex Johnson', 'alex.johnson@healthmail.com', 'AJ')">
+                <div class="account-avatar bg-indigo">AJ</div>
+                <div class="account-details">
+                  <span class="account-name">Alex Johnson</span>
+                  <span class="account-email">alex.johnson@healthmail.com &bull; Patient</span>
+                </div>
+                <i data-lucide="arrow-right" class="account-arrow"></i>
+              </div>
+
+              <div class="account-item" onclick="luminaApp.loginWithPredefinedGoogle('Mohith N', 'mohith.n@healthmail.com', 'MN')">
+                <div class="account-avatar bg-emerald">MN</div>
+                <div class="account-details">
+                  <span class="account-name">Mohith N</span>
+                  <span class="account-email">mohith.n@healthmail.com &bull; Patient</span>
+                </div>
+                <i data-lucide="arrow-right" class="account-arrow"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Privacy & Guest Shortcut -->
+        <div class="auth-footer-bar">
+          <div class="auth-security-badge">
+            <i data-lucide="lock"></i>
+            <span>HIPAA-Friendly • 100% Client-Side Local Storage Privacy</span>
+          </div>
+          <button type="button" class="btn-guest-bypass" onclick="luminaApp.continueAsGuest()">
+            <span>Continue as Guest Patient</span>
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- VIEW 2: PATIENT MEDICAL CARD INTAKE (Collects details to know the patient!) -->
+      <div id="authStepProfile" class="auth-step-panel" style="display: none;">
+        <div class="profile-intake-header">
+          <div class="intake-badge">
+            <i data-lucide="stethoscope"></i>
+          </div>
+          <div>
+            <h3>🩺 Complete Your Patient Medical Profile</h3>
+            <p>This medical information is essential for your doctor to evaluate prescriptions and emergency responders to provide safe treatment.</p>
+          </div>
+        </div>
+
+        <form id="patientProfileForm" class="patient-intake-form" onsubmit="event.preventDefault(); luminaApp.handleSavePatientProfile();">
+          
+          <div class="intake-section-title">
+            <i data-lucide="user"></i> Personal & Demographic Information
+          </div>
+
+          <div class="form-row form-grid-3">
+            <div class="form-group">
+              <label class="form-label required" for="profileFullNameInput">Full Name</label>
+              <input type="text" id="profileFullNameInput" class="glass-input" placeholder="e.g. Alex Johnson" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required" for="profileAgeInput">Age / Years</label>
+              <input type="number" id="profileAgeInput" class="glass-input" placeholder="e.g. 42" min="1" max="120" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label required" for="profileGenderSelect">Gender</label>
+              <select id="profileGenderSelect" class="glass-select" required>
+                <option value="Male" selected>Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row form-grid-2">
+            <div class="form-group">
+              <label class="form-label required" for="profilePhoneInput">Primary Mobile Phone</label>
+              <input type="tel" id="profilePhoneInput" class="glass-input" placeholder="+91 98765 43210" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profileEmailInput">Email Address</label>
+              <input type="email" id="profileEmailInput" class="glass-input" placeholder="e.g. patient@example.com">
+            </div>
+          </div>
+
+          <div class="intake-section-title">
+            <i data-lucide="activity"></i> Critical Clinical Identifiers
+          </div>
+
+          <div class="form-row form-grid-2">
+            <div class="form-group">
+              <label class="form-label required" for="profileBloodGroupSelect">
+                <span>Blood Group</span>
+                <span class="label-badge-red">Crucial for Medical Care</span>
+              </label>
+              <select id="profileBloodGroupSelect" class="glass-select" required>
+                <option value="O+" selected>🩸 O Positive (O+)</option>
+                <option value="O-">🩸 O Negative (O-)</option>
+                <option value="A+">🩸 A Positive (A+)</option>
+                <option value="A-">🩸 A Negative (A-)</option>
+                <option value="B+">🩸 B Positive (B+)</option>
+                <option value="B-">🩸 B Negative (B-)</option>
+                <option value="AB+">🩸 AB Positive (AB+)</option>
+                <option value="AB-">🩸 AB Negative (AB-)</option>
+                <option value="Unknown">Unknown / Pending Lab Test</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="profileAllergiesInput">
+                <span>Known Drug Allergies</span>
+                <span class="label-badge-amber">Prevents Adverse Reactions</span>
+              </label>
+              <input type="text" id="profileAllergiesInput" class="glass-input" placeholder="e.g. Penicillin, Sulfa, Aspirin" value="None known">
+              <div class="quick-chip-row" id="allergiesChipRow">
+                <button type="button" class="quick-chip" data-val="Penicillin">Penicillin</button>
+                <button type="button" class="quick-chip" data-val="Sulfa Drugs">Sulfa Drugs</button>
+                <button type="button" class="quick-chip" data-val="Aspirin/NSAIDs">Aspirin/NSAIDs</button>
+                <button type="button" class="quick-chip" data-val="Latex">Latex</button>
+                <button type="button" class="quick-chip active" data-val="None known">None known</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="profileConditionsInput">Chronic Medical Conditions / Diagnoses</label>
+            <input type="text" id="profileConditionsInput" class="glass-input" placeholder="e.g. Hypertension, Type 2 Diabetes, Asthma" value="None">
+            <div class="quick-chip-row" id="conditionsChipRow">
+              <button type="button" class="quick-chip" data-val="Hypertension">Hypertension (High BP)</button>
+              <button type="button" class="quick-chip" data-val="Type 2 Diabetes">Type 2 Diabetes</button>
+              <button type="button" class="quick-chip" data-val="Asthma">Asthma</button>
+              <button type="button" class="quick-chip" data-val="Thyroid">Thyroid</button>
+              <button type="button" class="quick-chip" data-val="Heart Disease">Heart Condition</button>
+              <button type="button" class="quick-chip active" data-val="None">None</button>
+            </div>
+          </div>
+
+          <div class="intake-section-title">
+            <i data-lucide="stethoscope"></i> Doctor & Emergency Contact Details
+          </div>
+
+          <div class="form-row form-grid-3">
+            <div class="form-group">
+              <label class="form-label" for="profileDoctorNameInput">Primary Doctor Name</label>
+              <input type="text" id="profileDoctorNameInput" class="glass-input" placeholder="e.g. Dr. Robert Chen">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profileDoctorHospitalInput">Clinic / Hospital</label>
+              <input type="text" id="profileDoctorHospitalInput" class="glass-input" placeholder="e.g. City General Clinic">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profileDoctorPhoneInput">Doctor's WhatsApp / Phone</label>
+              <input type="tel" id="profileDoctorPhoneInput" class="glass-input" placeholder="e.g. +91 98765 12345">
+            </div>
+          </div>
+
+          <div class="form-row form-grid-3">
+            <div class="form-group">
+              <label class="form-label" for="profileEmergencyNameInput">Emergency Caregiver Contact</label>
+              <input type="text" id="profileEmergencyNameInput" class="glass-input" placeholder="e.g. Emma Johnson">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profileEmergencyRelationSelect">Relationship</label>
+              <select id="profileEmergencyRelationSelect" class="glass-select">
+                <option value="Spouse">Spouse</option>
+                <option value="Parent">Parent</option>
+                <option value="Child / Son / Daughter">Child (Son/Daughter)</option>
+                <option value="Sibling">Sibling</option>
+                <option value="Caregiver">Caregiver / Nurse</option>
+                <option value="Friend">Friend</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="profileEmergencyPhoneInput">Caregiver Phone Number</label>
+              <input type="tel" id="profileEmergencyPhoneInput" class="glass-input" placeholder="e.g. +91 98765 67890">
+            </div>
+          </div>
+
+          <div class="intake-actions-bar">
+            <button type="button" class="btn btn-ghost" onclick="luminaApp.backToAuthStep()">
+              <i data-lucide="arrow-left"></i> Back
+            </button>
+            <button type="submit" class="btn btn-primary glow-btn">
+              <i data-lucide="check-check"></i> Save Patient Profile & Enter Dashboard
+            </button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Notification Banner Prompt if permission default -->
+  <div id="notificationBanner" class="notification-prompt-banner glass-card" style="display: none;">
+    <div class="banner-content">
+      <div class="banner-icon-box">
+        <i data-lucide="bell-ring"></i>
+      </div>
+      <div>
+        <h4>Enable Timely Browser Alarms</h4>
+        <p>Get on-time audible alarms and system alerts when your medicines are due even if you switch tabs.</p>
+      </div>
+    </div>
+    <div class="banner-actions">
+      <button id="enableNotificationsBtn" class="btn btn-primary btn-sm">Allow Notifications</button>
+      <button id="dismissBannerBtn" class="btn btn-ghost btn-sm">Later</button>
+    </div>
+  </div>
+
+  <div class="app-shell" id="appShell">
+    <!-- Left Navigation Sidebar -->
+    <aside class="app-sidebar" id="appSidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="brand-icon-mark">
+            <i data-lucide="activity"></i>
+          </div>
+          <div class="brand-text-wrap">
+            <span class="brand-app-name">Lumina<span class="brand-teal">Med</span></span>
+            <span class="brand-sub-badge">Clinical SaaS</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Navigation Menu -->
+      <nav class="sidebar-nav">
+        <div class="sidebar-group-label">Overview</div>
+        <button type="button" class="sidebar-nav-item active" data-tab="tab-dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </button>
+        <button type="button" class="sidebar-nav-item" data-tab="tab-today">
+          <i data-lucide="calendar-clock"></i>
+          <span>Today's Schedule</span>
+          <span class="sidebar-pill-badge" id="sidebarTodayBadge">0</span>
+        </button>
+
+        <div class="sidebar-group-label" style="margin-top: 16px;">Clinical Management</div>
+        <button type="button" class="sidebar-nav-item" data-tab="tab-medications">
+          <i data-lucide="pill"></i>
+          <span>Medicines & Stock</span>
+          <span class="sidebar-pill-badge" id="sidebarMedsBadge">0</span>
+        </button>
+        <button type="button" class="sidebar-nav-item" data-tab="tab-vitals">
+          <i data-lucide="heart-pulse"></i>
+          <span>Health Checker</span>
+          <span class="sidebar-pill-badge" id="sidebarVitalsBadge">0</span>
+        </button>
+        <button type="button" class="sidebar-nav-item" data-tab="tab-appointments">
+          <i data-lucide="calendar"></i>
+          <span>Appointments & Refills</span>
+          <span class="sidebar-pill-badge" id="sidebarApptsBadge">0</span>
+        </button>
+        <button type="button" class="sidebar-nav-item" data-tab="tab-history">
+          <i data-lucide="clipboard-check"></i>
+          <span>Adherence History</span>
+        </button>
+
+        <div class="sidebar-group-label" style="margin-top: 16px;">Safety & System</div>
+        <button type="button" class="sidebar-nav-item" data-tab="tab-caregivers">
+          <i data-lucide="shield-alert"></i>
+          <span>Caregivers & SOS</span>
+          <span class="sidebar-pill-badge badge-emergency" id="sidebarSosBadge">0</span>
+        </button>
+        <button type="button" class="sidebar-nav-item" data-tab="tab-settings">
+          <i data-lucide="settings"></i>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <!-- Sidebar Patient Mini Card & Clinical Status -->
+      <div class="sidebar-footer">
+        <div class="sidebar-system-status">
+          <span class="status-indicator-dot"></span>
+          <span>Alarms & Safety Active</span>
+        </div>
+        <div class="sidebar-patient-card" onclick="luminaApp.openPatientProfileModal()" title="View Patient Profile">
+          <div class="patient-avatar-sm" id="sidebarPatientAvatar">PT</div>
+          <div class="patient-info-sm">
+            <span class="patient-name-sm" id="sidebarPatientName">Patient</span>
+            <span class="patient-meta-sm" id="sidebarPatientBlood">🩸 O+</span>
+          </div>
+          <i data-lucide="chevron-right" class="sidebar-patient-arrow"></i>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Sidebar Backdrop for Mobile Drawer -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="luminaApp.toggleSidebar(false)"></div>
+
+    <!-- App Main Workspace Column -->
+    <div class="app-main-column">
+      <!-- Slim, Professional Header -->
+      <header class="app-slim-header" id="appSlimHeader">
+        <div class="header-left">
+          <button type="button" class="btn-sidebar-toggle" id="sidebarToggleBtn" onclick="luminaApp.toggleSidebar()" aria-label="Toggle navigation menu">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="header-breadcrumbs">
+            <span class="breadcrumb-app">LuminaMed</span>
+            <span class="breadcrumb-separator">/</span>
+            <span class="breadcrumb-current" id="headerBreadcrumbTitle">Dashboard</span>
+          </div>
+        </div>
+
+        <div class="header-center">
+          <div class="header-search-bar">
+            <i data-lucide="search"></i>
+            <input type="text" id="globalSearchInput" placeholder="Search medicines, dosages, instructions..." aria-label="Search medicines">
+            <span class="search-kbd">⌘K</span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Live Clinical Clock & Next Alarm Mini-Pill -->
+          <div class="header-clinical-clock">
+            <div class="clock-display-wrap">
+              <span class="clock-time-val" id="liveClock">00:00:00 AM</span>
+              <span class="clock-date-val" id="liveDate">Today</span>
+            </div>
+            <div class="next-alarm-capsule" id="headerNextAlarmPill">
+              <i data-lucide="alarm-clock" class="icon-pulse"></i>
+              <span class="next-alarm-val" id="headerNextCountdown">Calculating...</span>
+            </div>
+          </div>
+
+          <div class="header-action-divider"></div>
+
+          <!-- Secondary Actions Toolbar -->
+          <div class="header-secondary-toolbar">
+            <!-- Notifications Bell & Dropdown -->
+            <div class="header-notification-wrap">
+              <button type="button" class="btn-header-tool" id="headerNotificationBtn" onclick="luminaApp.toggleNotificationPopover()" title="Today's Reminders & Alerts" aria-label="Notifications">
+                <i data-lucide="bell"></i>
+                <span class="tool-text">Alerts</span>
+                <span class="tool-badge-pill" id="headerNotificationBadge" style="display: none;">0</span>
+              </button>
+              <div class="notification-popover" id="notificationPopover" style="display: none;">
+                <div class="notif-header">
+                  <div class="notif-header-title">
+                    <i data-lucide="bell" style="width: 14px; height: 14px; color: var(--teal-600);"></i>
+                    <h4>Today's Reminders</h4>
+                  </div>
+                  <button type="button" class="btn-close-sm" onclick="luminaApp.toggleNotificationPopover(false)" aria-label="Close notification panel">
+                    <i data-lucide="x" style="width: 13px; height: 13px;"></i>
+                  </button>
+                </div>
+                <div class="notif-list" id="notificationPopoverList">
+                  <!-- Populated dynamically with today's alerts -->
+                </div>
+                <div class="notif-footer">
+                  <button type="button" class="btn-link-sm" onclick="luminaApp.switchTab('tab-today'); luminaApp.toggleNotificationPopover(false);">
+                    <span>View Today's Schedule</span>
+                    <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button type="button" class="btn-header-tool" id="testAlarmQuickBtn" title="Test Alarm Sound and Modal">
+              <i data-lucide="volume-2"></i>
+              <span class="tool-text">Test Sound</span>
+            </button>
+            <button type="button" class="btn-header-tool" id="openRxModalBtn" onclick="openRxModal()" title="Scan or Upload Medical Receipt">
+              <i data-lucide="scan-line"></i>
+              <span class="tool-text">Scan Rx</span>
+            </button>
+            <button type="button" class="btn-header-tool" id="openInteractionsModalBtn" onclick="openInteractionsModal()" title="Drug Interactions & Clinical Safety Hub">
+              <i data-lucide="shield-check" id="headerSafetyIcon"></i>
+              <span class="tool-text">Safety</span>
+              <span class="tool-badge-pill" id="headerSafetyBadge">0</span>
+            </button>
+            <button type="button" class="btn-header-tool" id="elderlyModeToggleBtn" onclick="luminaApp.toggleElderlyMode()" title="Toggle High Contrast & Large Text">
+              <i data-lucide="type"></i>
+              <span class="tool-text">Large Text</span>
+            </button>
+          </div>
+
+          <div class="header-action-divider"></div>
+
+          <!-- Essential Primary Action: SOS Emergency Button (Protected with confirmation directory dialog) -->
+          <button type="button" class="btn-header-sos" id="openEmergencySosBtn" onclick="luminaApp.openEmergencySosModal()" title="Emergency SOS Directory & Caregiver Alert (Opens confirmation dialog)" aria-label="Emergency SOS Directory">
+            <i data-lucide="shield-alert"></i>
+            <span>SOS</span>
+          </button>
+
+          <!-- Essential Primary Action: Add Medication Button -->
+          <button type="button" class="btn-header-add" id="openAddModalBtn" title="Add New Medication">
+            <i data-lucide="plus"></i>
+            <span>Add Med</span>
+          </button>
+
+          <div class="header-action-divider"></div>
+
+          <!-- Patient Profile Pill & Logout -->
+          <div class="header-patient-group">
+            <button type="button" class="btn-header-patient" id="headerPatientBtn" onclick="luminaApp.openPatientProfileModal()" title="Patient Profile & Medical Record">
+              <div class="header-avatar" id="headerPatientAvatar">PT</div>
+              <div class="header-patient-meta">
+                <span class="header-patient-name" id="headerPatientName">Patient</span>
+                <span class="header-patient-blood" id="headerPatientBlood">🩸 O+</span>
+              </div>
+            </button>
+            <button type="button" class="btn-header-logout" id="headerSignOutBtn" onclick="luminaApp.confirmLogoutPatient()" title="Sign Out / Switch Patient">
+              <i data-lucide="log-out"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Workspace Content Body -->
+      <main class="app-workspace-body" id="appWorkspaceBody">
+
+        <!-- TAB 1: DASHBOARD OVERVIEW -->
+        <section id="tab-dashboard" class="tab-content active">
+          <!-- Welcoming Header Hero Banner -->
+          <div class="dashboard-hero-banner" id="dashboardHeroBanner">
+            <div class="hero-text-area">
+              <div class="hero-badge">
+                <span class="hero-badge-dot"></span>
+                <span class="hero-badge-text" id="heroGreetingBadge">Good afternoon</span>
+              </div>
+              <h1 class="hero-title" id="heroGreetingTitle">
+                Welcome back, <span class="brand-teal" id="heroGreetingPatientName">Alex</span>
+              </h1>
+              <p class="hero-subtitle" id="heroGreetingSubtitle">
+                Your daily prescriptions and vital metrics are ready. Keep your adherence high today.
+              </p>
+              <div class="hero-quick-actions">
+                <button type="button" class="btn btn-primary btn-sm" onclick="openAddModal()">
+                  <i data-lucide="plus"></i>
+                  <span>Add Medication</span>
+                </button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="luminaApp.switchTab('tab-history')">
+                  <i data-lucide="clipboard-check"></i>
+                  <span>View Adherence Logs</span>
+                </button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="openVitalsModal()">
+                  <i data-lucide="activity"></i>
+                  <span>Log Vitals</span>
+                </button>
+              </div>
+            </div>
+            <div class="hero-visual-side">
+              <div class="hero-status-pill">
+                <i data-lucide="calendar-check" class="text-teal"></i>
+                <div>
+                  <span class="caption">Today's Schedule</span>
+                  <strong id="heroScheduleStatusText">Calculating schedule...</strong>
+                </div>
+              </div>
+              <!-- Subtle Healthcare Clinical Vector Graphic -->
+              <div class="hero-illustration-box">
+                <svg viewBox="0 0 160 100" class="hero-clinical-svg" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="heroTealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#0f766e" stop-opacity="0.18"/>
+                      <stop offset="100%" stop-color="#14b8a6" stop-opacity="0.04"/>
+                    </linearGradient>
+                  </defs>
+                  <!-- Background circular shield pulse -->
+                  <circle cx="80" cy="50" r="42" fill="url(#heroTealGrad)"/>
+                  <circle cx="80" cy="50" r="30" fill="none" stroke="rgba(15, 118, 110, 0.15)" stroke-width="1.5" stroke-dasharray="3 3"/>
+                  <!-- Clean clinical heartbeat pulse waveform -->
+                  <path d="M25 50 H55 L63 36 L71 68 L79 42 L85 56 L91 50 H135" fill="none" stroke="#0d9488" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  <!-- Medical Capsule Pills -->
+                  <rect x="58" y="16" width="18" height="8" rx="4" fill="#0f766e" opacity="0.85"/>
+                  <rect x="76" y="16" width="18" height="8" rx="4" fill="#10b981" opacity="0.85"/>
+                  <circle cx="118" cy="30" r="3.5" fill="#0d9488" opacity="0.5"/>
+                  <circle cx="42" cy="74" r="3" fill="#10b981" opacity="0.45"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Four Redesigned Summary Cards -->
+          <div class="summary-cards-grid">
+            <!-- Card 1: Medication Adherence -->
+            <div class="summary-card" onclick="luminaApp.switchTab('tab-history')" title="View Adherence History">
+              <div class="summary-card-top">
+                <span class="summary-card-kicker">Medication Adherence</span>
+                <div class="summary-icon-box bg-mint-subtle">
+                  <i data-lucide="activity"></i>
+                </div>
+              </div>
+              <div class="summary-card-main">
+                <span class="summary-card-value" id="adherencePercent">0%</span>
+                <span class="summary-badge badge-mint" id="adherenceStatus">On Track</span>
+              </div>
+              <div class="summary-progress-track">
+                <div class="summary-progress-fill" id="adherenceProgressBar" style="width: 0%;"></div>
+              </div>
+              <span class="summary-card-subtext" id="adherenceSubtext">Daily dosing target</span>
+            </div>
+
+            <!-- Card 2: Completed Doses -->
+            <div class="summary-card" onclick="luminaApp.switchTab('tab-today')" title="View Today's Schedule">
+              <div class="summary-card-top">
+                <span class="summary-card-kicker">Completed Doses</span>
+                <div class="summary-icon-box bg-teal-subtle">
+                  <i data-lucide="check-circle-2"></i>
+                </div>
+              </div>
+              <div class="summary-card-main">
+                <span class="summary-card-value" id="dosesCompletedRatio">0 / 0</span>
+                <span class="summary-card-unit">taken today</span>
+              </div>
+              <div class="summary-card-detail-row">
+                <span class="summary-card-subtext" id="dosesCompletedSubtext">Recorded intake audit</span>
+                <span class="summary-card-pill" id="pendingDosesText">0 doses remaining</span>
+              </div>
+            </div>
+
+            <!-- Card 3: Upcoming Next Dose -->
+            <div class="summary-card highlight-summary-card" onclick="luminaApp.switchTab('tab-today')" title="View Today's Schedule">
+              <div class="summary-card-top">
+                <span class="summary-card-kicker">Immediate Next Dose</span>
+                <div class="summary-icon-box bg-blue-subtle">
+                  <i data-lucide="clock"></i>
+                </div>
+              </div>
+              <div class="summary-card-main">
+                <span class="summary-card-title-val" id="nextDoseMedName">No Upcoming</span>
+              </div>
+              <div class="summary-card-detail-row">
+                <div class="next-dose-capsule">
+                  <span class="badge-time" id="nextDoseScheduledTime">--:--</span>
+                  <span class="next-rel" id="nextDoseTimerBadge">All clear</span>
+                </div>
+                <span class="summary-card-subtext">Automated alarm alert</span>
+              </div>
+            </div>
+
+            <!-- Card 4: Refill Status -->
+            <div class="summary-card" onclick="luminaApp.switchTab('tab-medications')" title="View Medicines Cabinet">
+              <div class="summary-card-top">
+                <span class="summary-card-kicker">Refill Status</span>
+                <div class="summary-icon-box bg-amber-subtle">
+                  <i data-lucide="package"></i>
+                </div>
+              </div>
+              <div class="summary-card-main">
+                <span class="summary-card-value" id="lowStockCount">0</span>
+                <span class="summary-badge badge-neutral" id="refillStatusText">Inventory sufficient</span>
+              </div>
+              <div class="summary-card-detail-row">
+                <span class="summary-card-subtext">Low stock threshold &le; 5 units</span>
+                <span class="summary-link-text">Check Stock <i data-lucide="chevron-right"></i></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overdue Alert Banner (Shown when doses need attention) -->
+          <div class="overdue-alert-banner" id="missedDosesCard" style="display: none;">
+            <div class="overdue-alert-left">
+              <div class="overdue-icon-wrap">
+                <i data-lucide="alert-triangle"></i>
+              </div>
+              <div>
+                <h4 class="overdue-title"><span id="missedDosesCount">0</span> Dose(s) Need Attention</h4>
+                <p class="overdue-sub" id="missedDosesSubtext">One or more doses are overdue. Mark as taken or reschedule.</p>
+              </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-rose" onclick="luminaApp.switchTab('tab-today')">
+              <span>Review Overdue</span>
+              <i data-lucide="arrow-right"></i>
+            </button>
+            <span id="missedDosesStatusText" style="display: none;"></span>
+          </div>
+
+          <!-- Health Overview Section on Dashboard -->
+          <div class="dashboard-health-overview" id="dashboardHealthOverview">
+            <div class="health-overview-header">
+              <div class="overview-title-wrap">
+                <div class="overview-icon-badge">
+                  <i data-lucide="activity"></i>
+                </div>
+                <div>
+                  <h3 class="overview-title">Health Overview</h3>
+                  <p class="overview-subtitle">Latest physiological indicators & clinical targets</p>
+                </div>
+              </div>
+              <div class="overview-header-actions">
+                <button type="button" class="btn btn-outline btn-sm" onclick="luminaApp.switchTab('tab-vitals')">
+                  <span>View Full Trends & Charts</span>
+                  <i data-lucide="arrow-right"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="health-overview-grid">
+              <!-- Blood Pressure Card -->
+              <div class="health-metric-widget" onclick="openVitalsModal('bp')" title="Click to log Blood Pressure">
+                <div class="widget-top">
+                  <div class="widget-icon bg-blue-subtle">
+                    <i data-lucide="heart"></i>
+                  </div>
+                  <span class="widget-badge badge-green" id="overviewBPBadge">Optimal / Normal</span>
+                </div>
+                <div class="widget-body">
+                  <span class="widget-label">Blood Pressure</span>
+                  <div class="widget-val-row">
+                    <span class="widget-val" id="overviewBPVal">-- / --</span>
+                    <span class="widget-unit">mmHg</span>
+                  </div>
+                  <div class="widget-trend-wrap" id="overviewBPTrend">
+                    <!-- Historical mini trend curve rendered only when real records exist -->
+                  </div>
+                </div>
+                <div class="widget-footer">
+                  <span class="widget-time" id="overviewBPTime">Click to record</span>
+                  <span class="widget-action-link"><i data-lucide="plus"></i> Record</span>
+                </div>
+              </div>
+
+              <!-- Blood Glucose Card -->
+              <div class="health-metric-widget" onclick="openVitalsModal('glucose')" title="Click to log Blood Glucose">
+                <div class="widget-top">
+                  <div class="widget-icon bg-mint-subtle">
+                    <i data-lucide="droplet"></i>
+                  </div>
+                  <span class="widget-badge badge-green" id="overviewGlucoseBadge">Normal Fasting</span>
+                </div>
+                <div class="widget-body">
+                  <span class="widget-label">Blood Glucose</span>
+                  <div class="widget-val-row">
+                    <span class="widget-val" id="overviewGlucoseVal">--</span>
+                    <span class="widget-unit">mg/dL</span>
+                  </div>
+                  <div class="widget-trend-wrap" id="overviewGlucoseTrend">
+                    <!-- Historical mini trend curve rendered only when real records exist -->
+                  </div>
+                </div>
+                <div class="widget-footer">
+                  <span class="widget-time" id="overviewGlucoseTime">Click to record</span>
+                  <span class="widget-action-link"><i data-lucide="plus"></i> Record</span>
+                </div>
+              </div>
+
+              <!-- Heart Rate / Pulse Card -->
+              <div class="health-metric-widget" onclick="openVitalsModal('pulse')" title="Click to log Heart Rate">
+                <div class="widget-top">
+                  <div class="widget-icon bg-rose-subtle">
+                    <i data-lucide="activity"></i>
+                  </div>
+                  <span class="widget-badge badge-green" id="overviewPulseBadge">Normal Resting</span>
+                </div>
+                <div class="widget-body">
+                  <span class="widget-label">Heart Rate (Pulse)</span>
+                  <div class="widget-val-row">
+                    <span class="widget-val" id="overviewPulseVal">--</span>
+                    <span class="widget-unit">bpm</span>
+                  </div>
+                  <div class="widget-trend-wrap" id="overviewPulseTrend">
+                    <!-- Historical mini trend curve rendered only when real records exist -->
+                  </div>
+                </div>
+                <div class="widget-footer">
+                  <span class="widget-time" id="overviewPulseTime">Click to record</span>
+                  <span class="widget-action-link"><i data-lucide="plus"></i> Record</span>
+                </div>
+              </div>
+
+              <!-- Body Temperature Card -->
+              <div class="health-metric-widget" onclick="openVitalsModal('temperature')" title="Click to log Body Temperature">
+                <div class="widget-top">
+                  <div class="widget-icon bg-amber-subtle">
+                    <i data-lucide="thermometer"></i>
+                  </div>
+                  <span class="widget-badge badge-green" id="overviewTempBadge">Normal Temperature</span>
+                </div>
+                <div class="widget-body">
+                  <span class="widget-label">Body Temperature</span>
+                  <div class="widget-val-row">
+                    <span class="widget-val" id="overviewTempVal">--</span>
+                    <span class="widget-unit">°F</span>
+                  </div>
+                  <div class="widget-trend-wrap" id="overviewTempTrend">
+                    <!-- Historical mini trend curve rendered only when real records exist -->
+                  </div>
+                </div>
+                <div class="widget-footer">
+                  <span class="widget-time" id="overviewTempTime">Click to record</span>
+                  <span class="widget-action-link"><i data-lucide="plus"></i> Record</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard Today's Medication Schedule Snapshot -->
+          <div class="dashboard-schedule-section">
+            <div class="section-sub-header">
+              <div>
+                <h2 class="section-title">Today's Medication Schedule</h2>
+                <p class="section-subtitle">Chronological reminders and active dose statuses for today</p>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" onclick="luminaApp.switchTab('tab-today')">
+                <span>Open Detailed Timeline</span>
+                <i data-lucide="arrow-right"></i>
+              </button>
+            </div>
+
+            <div id="dashboardTimelineContainer" class="timeline-doses-grid">
+              <!-- Dynamically populated doses -->
+            </div>
+
+            <div id="emptyDashboardScheduleState" class="empty-state" style="display: none;">
+              <div class="empty-icon-wrap">
+                <i data-lucide="calendar-plus"></i>
+              </div>
+              <h3>No medications scheduled for today</h3>
+              <p>You have completed all scheduled doses for today, or have not added any active prescriptions to your regimen yet.</p>
+              <div class="empty-state-actions">
+                <button class="btn btn-primary" onclick="openAddModal()">
+                  <i data-lucide="plus"></i> Add Medication
+                </button>
+                <button class="btn btn-outline" onclick="luminaApp.openRxModal()">
+                  <i data-lucide="scan-line"></i> Scan Doctor's Rx
+                </button>
+                <button class="btn btn-outline" onclick="luminaApp.loadSamplePrescriptions()">
+                  <i data-lucide="sparkles"></i> Load Sample Regimen
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: DEDICATED TODAY'S SCHEDULE -->
+        <section id="tab-today" class="tab-content">
+          <div class="section-sub-header">
+            <div>
+              <h2 class="section-title">Today's Dosing Timeline</h2>
+              <p class="section-subtitle">Chronological medication schedule with precision reminder alerts</p>
+            </div>
+            <div class="filter-pills-row">
+              <button class="filter-pill active" data-filter="all">All Doses</button>
+              <button class="filter-pill" data-filter="pending">Pending</button>
+              <button class="filter-pill" data-filter="taken">Taken</button>
+              <button class="filter-pill" data-filter="skipped">Skipped</button>
+            </div>
+          </div>
+
+          <!-- Daylight Phase Filter Bar (Morning, Afternoon, Evening, Bedtime) -->
+          <div class="daylight-phase-filter-wrap">
+            <div class="daylight-pills-row" id="daylightFiltersRow">
+              <button type="button" class="daylight-pill-btn active" data-daylight="all">
+                <i data-lucide="sun-medium"></i> All Daylight Slots
+              </button>
+              <button type="button" class="daylight-pill-btn" data-daylight="morning">
+                <span>🌅</span> Morning (6AM - 12PM)
+              </button>
+              <button type="button" class="daylight-pill-btn" data-daylight="afternoon">
+                <span>☀️</span> Afternoon (12PM - 5PM)
+              </button>
+              <button type="button" class="daylight-pill-btn" data-daylight="evening">
+                <span>🌆</span> Evening (5PM - 9PM)
+              </button>
+              <button type="button" class="daylight-pill-btn" data-daylight="bedtime">
+                <span>🌙</span> Bedtime (9PM - 5AM)
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Meal Buffer Alert Banner -->
+          <div id="activeMealBufferBanner" class="meal-buffer-banner" style="display: none;">
+            <div class="meal-buffer-left">
+              <div class="meal-buffer-icon-pulse">
+                <i data-lucide="hourglass" class="icon-spin-slow"></i>
+              </div>
+              <div>
+                <h4 id="mealBufferHeading">🍽️ Pre-Meal Buffer Active: <span id="mealBufferMedName">Medication</span></h4>
+                <p id="mealBufferMessage">Please wait before having your meal. Dose is absorbing for maximum effectiveness.</p>
+              </div>
+            </div>
+            <div class="meal-buffer-right">
+              <div class="buffer-timer-digital" id="mealBufferTimerDisplay">29:45</div>
+              <button type="button" class="btn btn-ghost btn-xs text-danger" onclick="luminaApp.stopActiveMealBuffer()">
+                <i data-lucide="x"></i> Cancel Buffer
+              </button>
+            </div>
+          </div>
+
+          <div id="todayTimelineContainer" class="timeline-doses-grid">
+            <!-- Dynamically populated doses -->
+          </div>
+
+          <!-- Redesigned Subtle Empty State -->
+          <div id="emptyTodayScheduleState" class="empty-state" style="display: none;">
+            <div class="empty-icon-wrap">
+              <i data-lucide="calendar-plus"></i>
+            </div>
+            <h3>No medications scheduled for today</h3>
+            <p>You have completed all scheduled doses for today, or have not added any active prescriptions to your regimen yet.</p>
+            <div class="empty-state-actions">
+              <button class="btn btn-primary" onclick="openAddModal()">
+                <i data-lucide="plus"></i> Add Medication
+              </button>
+              <button class="btn btn-outline" onclick="luminaApp.openRxModal()">
+                <i data-lucide="scan-line"></i> Scan Doctor's Rx
+              </button>
+              <button class="btn btn-outline" onclick="luminaApp.loadSamplePrescriptions()">
+                <i data-lucide="sparkles"></i> Load Sample Regimen
+              </button>
+            </div>
+          </div>
+        </section>
+
+      <!-- TAB 2: All Medicines & Stock -->
+      <section id="tab-medications" class="tab-content">
+        <div class="section-sub-header">
+          <div>
+            <h2 class="section-title">Medication Cabinet & Refill Inventory</h2>
+            <p class="section-subtitle">Monitor stock quantities, doses, frequency and refill thresholds</p>
+          </div>
+          <div class="btn-group-row">
+            <button class="btn btn-glass-secondary btn-sm" onclick="luminaApp.openRxModal()">
+              <i data-lucide="scan-line"></i> Scan Doctor's Rx
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+              <i data-lucide="plus"></i> Add Medicine
+            </button>
+          </div>
+        </div>
+
+        <div id="medicationsCabinetGrid" class="cabinet-grid">
+          <!-- Dynamically populated cards -->
+        </div>
+
+        <div id="emptyCabinetState" class="empty-state glass-card" style="display: none;">
+          <div class="empty-icon-wrap">
+            <i data-lucide="package-open"></i>
+          </div>
+          <h3>Your medicine cabinet is empty</h3>
+          <p>Add your prescription drugs manually or scan your doctor's medical receipt to extract them automatically.</p>
+          <div class="btn-group-row" style="justify-content: center; margin-top: 10px;">
+            <button class="btn btn-primary" onclick="openAddModal()">
+              <i data-lucide="plus"></i> Add Medicine Now
+            </button>
+            <button class="btn btn-glass-secondary" onclick="luminaApp.openRxModal()">
+              <i data-lucide="scan-line"></i> Scan Doctor's Receipt
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: History & Adherence Log -->
+      <section id="tab-history" class="tab-content">
+        <div class="section-sub-header">
+          <div>
+            <h2 class="section-title">Medicine Intake History</h2>
+            <p class="section-subtitle">Chronological audit trail of all taken, snoozed, and skipped doses</p>
+          </div>
+          <button id="clearHistoryBtn" class="btn btn-glass-secondary btn-sm text-danger">
+            <i data-lucide="trash-2"></i> Clear History
+          </button>
+        </div>
+
+        <div class="glass-card table-glass-card">
+          <div class="table-responsive">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Medicine</th>
+                  <th>Dosage</th>
+                  <th>Scheduled For</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <!-- Dynamically populated history -->
+              </tbody>
+            </table>
+          </div>
+          <div id="emptyHistoryState" class="empty-state" style="display: none; padding: 40px 20px;">
+            <i data-lucide="clipboard-list" style="width: 48px; height: 48px; stroke: #94a3b8; margin-bottom: 12px;"></i>
+            <h4>No logs recorded yet</h4>
+            <p>Once you mark medications as taken or skipped, the history log will update here.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Caregiver & Emergency Contacts -->
+      <section id="tab-caregivers" class="tab-content">
+        <div class="section-sub-header">
+          <div>
+            <h2 class="section-title">Caregiver & Emergency Directory</h2>
+            <p class="section-subtitle">Auto-notify family, caregivers, or doctors via WhatsApp & fast-dial if doses are missed</p>
+          </div>
+          <div class="btn-group-row">
+            <button class="btn btn-emergency-sos btn-sm" onclick="luminaApp.openEmergencySosModal()">
+              <i data-lucide="phone-call"></i> Fast SOS Dial
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="luminaApp.openContactModal()">
+              <i data-lucide="user-plus"></i> Add Emergency Contact
+            </button>
+          </div>
+        </div>
+
+        <!-- Missed Dose Alerts Center -->
+        <div id="missedDoseAlertContainer" class="missed-alerts-wrapper" style="display: none;">
+          <!-- Dynamically populated if any dose is missed -->
+        </div>
+
+        <!-- Automated Missed Dose Rules Card -->
+        <div class="caregiver-rules-card glass-card">
+          <div class="rules-card-header">
+            <div class="rules-icon-wrap">
+              <i data-lucide="shield-alert"></i>
+            </div>
+            <div>
+              <h3>Automated Caregiver Alert System</h3>
+              <p>When an alarm is ringing and remains unmarked after the grace period, LuminaMed prepares one-tap WhatsApp and SMS alerts for your trusted contacts.</p>
+            </div>
+          </div>
+          
+          <div class="rules-config-grid">
+            <div class="form-group">
+              <label class="form-label" for="patientNameInput">Patient / User Name (appears in alert messages)</label>
+              <input type="text" id="patientNameInput" class="glass-input" placeholder="e.g. Grandma Mary, Dad, Charan" value="Patient">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="missedThresholdSelect">Missed Dose Alert Grace Period</label>
+              <select id="missedThresholdSelect" class="glass-select">
+                <option value="15">15 Minutes Delay</option>
+                <option value="30" selected>30 Minutes Delay (Recommended)</option>
+                <option value="45">45 Minutes Delay</option>
+                <option value="60">1 Hour Delay</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Directory of Contacts Grid -->
+        <div id="contactsDirectoryGrid" class="contacts-grid">
+          <!-- Dynamically populated contacts -->
+        </div>
+
+        <!-- Empty State for Contacts -->
+        <div id="emptyContactsState" class="empty-state glass-card" style="display: none;">
+          <div class="empty-icon-wrap" style="background: rgba(225, 29, 72, 0.1); color: var(--rose);">
+            <i data-lucide="shield-plus"></i>
+          </div>
+          <h3>No Emergency Contacts Added Yet</h3>
+          <p>Add your personal doctor, local hospital emergency line, or family caregivers so they can be alerted if a dose is missed.</p>
+          <button class="btn btn-primary" onclick="luminaApp.openContactModal()">
+            <i data-lucide="user-plus"></i> Add Emergency Contact
+          </button>
+        </div>
+      </section>
+
+      <!-- TAB 5: Sound & Alarm Settings -->
+      <section id="tab-settings" class="tab-content">
+        <div class="settings-grid">
+          <!-- Sound Selector Card -->
+          <div class="glass-card settings-card">
+            <div class="settings-card-header">
+              <div class="settings-icon-box bg-purple">
+                <i data-lucide="music"></i>
+              </div>
+              <div>
+                <h3>Alarm Chime & Tone</h3>
+                <p>Choose an audible synthesizer melody for precision medication alerts</p>
+              </div>
+            </div>
+
+            <div class="chime-options-list">
+              <label class="chime-radio-card">
+                <input type="radio" name="chimeSound" value="crystalBell" checked>
+                <div class="chime-card-content">
+                  <div class="chime-info">
+                    <strong>Crystal Medical Bell</strong>
+                    <span>Gentle, pleasant harmonic chime (Recommended)</span>
+                  </div>
+                  <button type="button" class="btn btn-icon-round play-sample-btn" data-sound="crystalBell" title="Play sound preview">
+                    <i data-lucide="volume-2"></i>
+                  </button>
+                </div>
+              </label>
+
+              <label class="chime-radio-card">
+                <input type="radio" name="chimeSound" value="harpChord">
+                <div class="chime-card-content">
+                  <div class="chime-info">
+                    <strong>Harp Serenade</strong>
+                    <span>Soothing multi-tone arpeggio, soft waking tone</span>
+                  </div>
+                  <button type="button" class="btn btn-icon-round play-sample-btn" data-sound="harpChord" title="Play sound preview">
+                    <i data-lucide="volume-2"></i>
+                  </button>
+                </div>
+              </label>
+
+              <label class="chime-radio-card">
+                <input type="radio" name="chimeSound" value="pulseBeep">
+                <div class="chime-card-content">
+                  <div class="chime-info">
+                    <strong>Digital Health Pulse</strong>
+                    <span>Crisp high-clarity rhythmic chime for noisy rooms</span>
+                  </div>
+                  <button type="button" class="btn btn-icon-round play-sample-btn" data-sound="pulseBeep" title="Play sound preview">
+                    <i data-lucide="volume-2"></i>
+                  </button>
+                </div>
+              </label>
+
+              <label class="chime-radio-card">
+                <input type="radio" name="chimeSound" value="zenBowl">
+                <div class="chime-card-content">
+                  <div class="chime-info">
+                    <strong>Zen Gong & Resonator</strong>
+                    <span>Deep calming reverberant tone</span>
+                  </div>
+                  <button type="button" class="btn btn-icon-round play-sample-btn" data-sound="zenBowl" title="Play sound preview">
+                    <i data-lucide="volume-2"></i>
+                  </button>
+                </div>
+              </label>
+            </div>
+
+            <!-- Volume Slider -->
+            <div class="setting-row">
+              <div class="setting-label-col">
+                <label for="alarmVolumeSlider">Alarm Volume: <span id="alarmVolumeLabel">80%</span></label>
+                <span class="subtext">Controls chime volume via Web Audio API</span>
+              </div>
+              <input type="range" id="alarmVolumeSlider" min="0" max="100" value="80" class="glass-slider">
+            </div>
+
+            <!-- Snooze Interval -->
+            <div class="setting-row">
+              <div class="setting-label-col">
+                <label for="defaultSnoozeSelect">Default Snooze Duration</label>
+                <span class="subtext">Time before alarm rings again if snoozed</span>
+              </div>
+              <select id="defaultSnoozeSelect" class="glass-select">
+                <option value="5">5 Minutes</option>
+                <option value="10" selected>10 Minutes</option>
+                <option value="15">15 Minutes</option>
+                <option value="30">30 Minutes</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Voice Announcement & Accessibility Card -->
+          <div class="glass-card settings-card">
+            <div class="settings-card-header">
+              <div class="settings-icon-box bg-emerald">
+                <i data-lucide="mic"></i>
+              </div>
+              <div>
+                <h3>Voice Reminders & Senior Accessibility</h3>
+                <p>Natural speech announcements for medication names, dosages, and high-contrast large text mode</p>
+              </div>
+            </div>
+
+            <div class="toggle-setting-row">
+              <div>
+                <strong>Spoken Medication Voice Reminders</strong>
+                <p>Announces patient name, medicine, dosage, and food instructions out loud when alarm rings</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="voiceAnnounceToggle" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-label-col">
+                <label for="voiceRateSlider">Speech Speed Rate: <span id="voiceRateLabel">0.95x</span></label>
+                <span class="subtext">Slower pace provides maximum clarity for elderly or hearing-impaired users</span>
+              </div>
+              <input type="range" id="voiceRateSlider" min="0.7" max="1.3" step="0.05" value="0.95" class="glass-slider">
+            </div>
+
+            <div class="btn-group-row" style="margin-top: 14px;">
+              <button type="button" class="btn btn-glass-secondary btn-sm" id="testVoiceAnnouncementBtn" onclick="luminaApp.testVoiceSpeech()">
+                <i data-lucide="volume-2"></i> Test Spoken Announcement
+              </button>
+              <button type="button" class="btn btn-glass-secondary btn-sm" onclick="luminaApp.toggleElderlyMode()">
+                <i data-lucide="eye"></i> Toggle Large Text Mode
+              </button>
+            </div>
+          </div>
+
+          <!-- Notification & System Settings -->
+          <div class="glass-card settings-card">
+            <div class="settings-card-header">
+              <div class="settings-icon-box bg-blue">
+                <i data-lucide="bell"></i>
+              </div>
+              <div>
+                <h3>Notifications & Live Alerts</h3>
+                <p>System alerts, browser notifications, and data management</p>
+              </div>
+            </div>
+
+            <div class="toggle-setting-row">
+              <div>
+                <strong>Desktop Push Notifications</strong>
+                <p>Receive notifications when the browser is minimized or running in background</p>
+              </div>
+              <button id="toggleNotificationBtn" class="btn btn-primary btn-sm">Check Permission</button>
+            </div>
+
+            <div class="toggle-setting-row">
+              <div>
+                <strong>Sound Continuous Ringing</strong>
+                <p>Repeats the chime every 15 seconds until medicine is taken or snoozed</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="continuousRingToggle" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <div class="toggle-setting-row">
+              <div>
+                <strong>Vibration Alert (Mobile Supported)</strong>
+                <p>Haptic vibration pulses alongside audio alarms</p>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="vibrationToggle" checked>
+                <span class="slider round"></span>
+              </label>
+            </div>
+
+            <hr class="glass-divider">
+
+            <!-- Data & Storage -->
+            <div class="data-mgmt-block">
+              <h4>Data & Storage</h4>
+              <p>Clear all your medicines and start fresh, or wipe adherence logs.</p>
+              <div class="btn-group-row">
+                <button id="resetAllDataBtn" class="btn btn-glass-secondary btn-sm text-danger">
+                  <i data-lucide="refresh-cw"></i> Reset All Data
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: Vitals & Health Metrics Tracker -->
+      <section id="tab-vitals" class="tab-content">
+        <div class="section-sub-header">
+          <div>
+            <h2 class="section-title">Vital Signs & Clinical Health Tracker</h2>
+            <p class="section-subtitle">Track Blood Pressure, Blood Glucose, Pulse, and Temperature with clinical AHA & ADA guidelines</p>
+          </div>
+          <div class="btn-group-row">
+            <button class="btn btn-primary btn-sm glow-btn" onclick="luminaApp.openVitalsModal()">
+              <i data-lucide="plus"></i> Log New Reading
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Core Vitals Quick Metric Cards -->
+        <div class="vitals-metrics-ribbon">
+          <!-- Blood Pressure Card -->
+          <div class="vital-metric-card glass-card" onclick="openVitalsModal('bp')" title="Click to log Blood Pressure">
+            <div class="metric-icon-box bg-blue">
+              <i data-lucide="heart"></i>
+            </div>
+            <div class="vital-info">
+              <div class="vital-label-row">
+                <span class="vital-label">Blood Pressure</span>
+                <span class="vital-badge badge-green" id="vitalsLatestBPBadge">Loading...</span>
+              </div>
+              <div class="vital-val-row">
+                <span class="vital-num" id="vitalsLatestBP">-- / --</span>
+                <span class="vital-unit">mmHg</span>
+              </div>
+              <div class="vital-meta-row">
+                <span class="vital-timestamp" id="vitalsLatestBPTime">Click to record</span>
+                <span class="vital-add-hint"><i data-lucide="plus"></i> Log</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Blood Glucose Card -->
+          <div class="vital-metric-card glass-card" onclick="openVitalsModal('glucose')" title="Click to log Blood Glucose">
+            <div class="metric-icon-box bg-emerald">
+              <i data-lucide="droplet"></i>
+            </div>
+            <div class="vital-info">
+              <div class="vital-label-row">
+                <span class="vital-label">Blood Glucose</span>
+                <span class="vital-badge badge-green" id="vitalsLatestGlucoseBadge">Loading...</span>
+              </div>
+              <div class="vital-val-row">
+                <span class="vital-num" id="vitalsLatestGlucose">--</span>
+                <span class="vital-unit">mg/dL</span>
+              </div>
+              <div class="vital-meta-row">
+                <span class="vital-timestamp" id="vitalsLatestGlucoseTime">Click to record</span>
+                <span class="vital-add-hint"><i data-lucide="plus"></i> Log</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Heart Rate / Pulse Card -->
+          <div class="vital-metric-card glass-card" onclick="openVitalsModal('pulse')" title="Click to log Pulse">
+            <div class="metric-icon-box bg-rose">
+              <i data-lucide="activity"></i>
+            </div>
+            <div class="vital-info">
+              <div class="vital-label-row">
+                <span class="vital-label">Heart Rate (Pulse)</span>
+                <span class="vital-badge badge-green" id="vitalsLatestPulseBadge">Loading...</span>
+              </div>
+              <div class="vital-val-row">
+                <span class="vital-num" id="vitalsLatestPulse">--</span>
+                <span class="vital-unit">bpm</span>
+              </div>
+              <div class="vital-meta-row">
+                <span class="vital-timestamp" id="vitalsLatestPulseTime">Click to record</span>
+                <span class="vital-add-hint"><i data-lucide="plus"></i> Log</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Body Temperature Card -->
+          <div class="vital-metric-card glass-card" onclick="openVitalsModal('temperature')" title="Click to log Temperature">
+            <div class="metric-icon-box bg-amber">
+              <i data-lucide="thermometer"></i>
+            </div>
+            <div class="vital-info">
+              <div class="vital-label-row">
+                <span class="vital-label">Body Temperature</span>
+                <span class="vital-badge badge-green" id="vitalsLatestTempBadge">Loading...</span>
+              </div>
+              <div class="vital-val-row">
+                <span class="vital-num" id="vitalsLatestTemp">--</span>
+                <span class="vital-unit">°F</span>
+              </div>
+              <div class="vital-meta-row">
+                <span class="vital-timestamp" id="vitalsLatestTempTime">Click to record</span>
+                <span class="vital-add-hint"><i data-lucide="plus"></i> Log</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Clinical Trend Curves Section -->
+        <div class="vitals-charts-grid">
+          <!-- Blood Pressure Chart Card -->
+          <div class="glass-card chart-card">
+            <div class="chart-header">
+              <div class="chart-title-wrap">
+                <div class="chart-icon-box bg-blue">
+                  <i data-lucide="trending-up"></i>
+                </div>
+                <div>
+                  <h3 class="chart-title">Blood Pressure Clinical Trend</h3>
+                  <span class="chart-sub">Systolic (Indigo) & Diastolic (Cyan) &bull; AHA Target: &lt;120/80 mmHg</span>
+                </div>
+              </div>
+              <div class="chart-legend">
+                <span class="legend-pill sys-pill"><span class="dot"></span> Systolic</span>
+                <span class="legend-pill dia-pill"><span class="dot"></span> Diastolic</span>
+              </div>
+            </div>
+            <div id="bpChartContainer" class="chart-render-wrap"></div>
+          </div>
+
+          <!-- Blood Glucose Chart Card -->
+          <div class="glass-card chart-card">
+            <div class="chart-header">
+              <div class="chart-title-wrap">
+                <div class="chart-icon-box bg-emerald">
+                  <i data-lucide="activity"></i>
+                </div>
+                <div>
+                  <h3 class="chart-title">Blood Glucose Glycemic Curve</h3>
+                  <span class="chart-sub">Target Fasting &lt;100 mg/dL &bull; Post-Meal &lt;140 mg/dL</span>
+                </div>
+              </div>
+              <div class="chart-legend">
+                <span class="legend-pill glucose-pill"><span class="dot"></span> Glucose mg/dL</span>
+              </div>
+            </div>
+            <div id="glucoseChartContainer" class="chart-render-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Vitals History Log Table -->
+        <div class="glass-card vitals-table-card">
+          <div class="table-card-header">
+            <div class="table-title-wrap">
+              <div class="table-icon-box bg-purple">
+                <i data-lucide="clipboard-list"></i>
+              </div>
+              <div>
+                <h3 class="table-card-title">Vitals Clinical Log</h3>
+                <p class="table-card-sub">Chronological history with clinical categorization & context</p>
+              </div>
+            </div>
+            <div class="filter-pills-row">
+              <button class="filter-pill active" data-vitals-filter="all">All Vitals</button>
+              <button class="filter-pill" data-vitals-filter="bp">Blood Pressure</button>
+              <button class="filter-pill" data-vitals-filter="glucose">Glucose</button>
+              <button class="filter-pill" data-vitals-filter="pulse">Pulse</button>
+              <button class="filter-pill" data-vitals-filter="temperature">Temperature</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="glass-table vitals-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Metric</th>
+                  <th>Reading Value</th>
+                  <th>Context / Activity</th>
+                  <th>Clinical Status</th>
+                  <th>Notes</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="vitalsTableBody">
+                <!-- Dynamically populated vitals entries -->
+              </tbody>
+            </table>
+          </div>
+
+          <div id="emptyVitalsState" class="empty-state" style="display: none; padding: 40px 20px;">
+            <div class="empty-icon-wrap" style="background: rgba(37, 99, 235, 0.1); color: var(--primary);">
+              <i data-lucide="activity"></i>
+            </div>
+            <h3>No vital sign records yet</h3>
+            <p>Regularly recording your blood pressure and blood glucose helps evaluate medication effectiveness.</p>
+            <button class="btn btn-primary" onclick="openVitalsModal()">
+              <i data-lucide="plus"></i> Log First Reading
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Doctor Appointments & Refill Scheduler -->
+      <section id="tab-appointments" class="tab-content">
+        <div class="section-sub-header">
+          <div>
+            <h2 class="section-title">Doctor Consultations & Refill Station</h2>
+            <p class="section-subtitle">Track clinic visits, diagnostic lab tests, and send one-tap pharmacy prescription refills via WhatsApp</p>
+          </div>
+          <div class="btn-group-row">
+            <button type="button" class="btn btn-primary btn-sm glow-btn" onclick="luminaApp.openAppointmentModal()">
+              <i data-lucide="calendar-plus"></i> Schedule Consultation / Lab
+            </button>
+          </div>
+        </div>
+
+        <!-- 1-Tap Pharmacy Prescription Refill Station -->
+        <div class="refill-station-card glass-card">
+          <div class="refill-station-header">
+            <div class="refill-station-icon-wrap">
+              <i data-lucide="package-search"></i>
+            </div>
+            <div class="refill-station-meta">
+              <div class="refill-station-title-row">
+                <h3>One-Tap WhatsApp Prescription Refill Station</h3>
+                <span class="badge-tag bg-amber" id="refillNeededCountBadge">Scanning stock...</span>
+              </div>
+              <p>Monitors cabinet stock to flag medicines with &le; 7 days remaining. Formats a complete clinical prescription renewal message for your pharmacist or primary doctor.</p>
+            </div>
+          </div>
+
+          <div id="refillNeededMedicinesList" class="refill-items-summary-grid">
+            <!-- Dynamically populated low stock medications -->
+          </div>
+
+          <div class="refill-dispatch-action-row">
+            <button type="button" class="btn btn-whatsapp-broadcast" onclick="luminaApp.sendPrescriptionRefillToPharmacy()">
+              <i data-lucide="send"></i>
+              <span>Send Refill Request via WhatsApp</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Consultations & Lab Tests Section -->
+        <div class="appointments-section-wrap">
+          <div class="appointments-header-row">
+            <h3 class="appointments-sub-heading">
+              <i data-lucide="calendar-clock"></i> Scheduled Consultations & Lab Appointments
+            </h3>
+            <div class="filter-pills-row">
+              <button type="button" class="filter-pill active" data-appointment-filter="all">All</button>
+              <button type="button" class="filter-pill" data-appointment-filter="upcoming">Upcoming</button>
+              <button type="button" class="filter-pill" data-appointment-filter="past">Completed</button>
+            </div>
+          </div>
+
+          <div id="appointmentsGrid" class="appointments-grid">
+            <!-- Dynamically populated appointment cards -->
+          </div>
+
+          <div id="emptyAppointmentsState" class="empty-state glass-card" style="display: none;">
+            <div class="empty-icon-wrap" style="background: rgba(37, 99, 235, 0.1); color: var(--primary);">
+              <i data-lucide="calendar-plus"></i>
+            </div>
+            <h3>No Scheduled Doctor Consultations</h3>
+            <p>Schedule your routine check-ups, specialist visits, or blood tests to keep a unified healthcare calendar with automatic reminders.</p>
+            <button type="button" class="btn btn-primary" onclick="luminaApp.openAppointmentModal()">
+              <i data-lucide="plus"></i> Schedule New Appointment
+            </button>
+          </div>
+        </div>
+      </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       ADD / EDIT MEDICINE MODAL
+       ============================================== -->
+  <div id="medModalOverlay" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog glass-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge" id="modalIconPreview">
+            <i data-lucide="pill"></i>
+          </div>
+          <div>
+            <h3 id="medModalTitle">Add New Medication</h3>
+            <p>Enter prescription details, timing, and dosage schedule</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="closeMedModalBtn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="medicationForm" class="modal-form-wrap">
+        <div class="modal-body-scroll">
+        <input type="hidden" id="editMedId" value="">
+
+        <!-- Medicine Name & Strength -->
+        <div class="form-row form-grid-2">
+          <div class="form-group">
+            <label for="medNameInput" class="form-label required">Medicine Name</label>
+            <input type="text" id="medNameInput" class="glass-input" placeholder="e.g., Amoxicillin, Atorvastatin" required>
+          </div>
+          <div class="form-group">
+            <label for="medDosageInput" class="form-label required">Dosage / Strength</label>
+            <input type="text" id="medDosageInput" class="glass-input" placeholder="e.g., 500 mg, 10 ml, 2 drops" required>
+          </div>
+        </div>
+
+        <!-- Medicine Form / Category -->
+        <div class="form-group">
+          <label class="form-label">Medication Form</label>
+          <div class="pill-type-selector" id="medTypeSelector">
+            <button type="button" class="type-pill-btn active" data-type="tablet">
+              <i data-lucide="circle-dot"></i> Tablet
+            </button>
+            <button type="button" class="type-pill-btn" data-type="capsule">
+              <i data-lucide="pill"></i> Capsule
+            </button>
+            <button type="button" class="type-pill-btn" data-type="syrup">
+              <i data-lucide="flask-conical"></i> Syrup / Liquid
+            </button>
+            <button type="button" class="type-pill-btn" data-type="injection">
+              <i data-lucide="syringe"></i> Injection
+            </button>
+            <button type="button" class="type-pill-btn" data-type="drops">
+              <i data-lucide="droplet"></i> Drops
+            </button>
+            <button type="button" class="type-pill-btn" data-type="inhaler">
+              <i data-lucide="wind"></i> Inhaler
+            </button>
+          </div>
+        </div>
+
+        <!-- Schedule Times -->
+        <div class="form-group">
+          <div class="label-with-action">
+            <label class="form-label required">Dose Times (Alarm Triggers)</label>
+            <button type="button" id="addDoseTimeBtn" class="btn-text-action">
+              <i data-lucide="plus"></i> Add Another Time
+            </button>
+          </div>
+          <p class="form-hint">Set exact times when your audio alarm will ring.</p>
+          <div id="timesContainer" class="times-input-list">
+            <!-- Dynamically added time inputs -->
+          </div>
+        </div>
+
+        <!-- Food Instructions & Pill Color Theme -->
+        <div class="form-row form-grid-2">
+          <div class="form-group">
+            <label for="foodInstructionSelect" class="form-label">Instructions / Food Relation</label>
+            <select id="foodInstructionSelect" class="glass-select">
+              <option value="After food" selected>After meal / food</option>
+              <option value="Before food">Before meal (empty stomach)</option>
+              <option value="With food">With meal</option>
+              <option value="Any time">Any time / As needed</option>
+              <option value="At bedtime">Right at bedtime</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Card Theme Color</label>
+            <div class="color-palette-selector" id="colorPaletteSelector">
+              <button type="button" class="color-swatch-btn bg-cyan active" data-color="cyan" title="Sky Cyan"></button>
+              <button type="button" class="color-swatch-btn bg-emerald" data-color="emerald" title="Mint Emerald"></button>
+              <button type="button" class="color-swatch-btn bg-indigo" data-color="indigo" title="Royal Indigo"></button>
+              <button type="button" class="color-swatch-btn bg-rose" data-color="rose" title="Rose Pink"></button>
+              <button type="button" class="color-swatch-btn bg-amber" data-color="amber" title="Golden Amber"></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Specific Dietary Warnings & Food Precautions -->
+        <div class="form-group dietary-precautions-group">
+          <div class="label-with-action">
+            <label class="form-label">
+              <i data-lucide="utensils" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
+              Dietary Warnings & Food Precautions
+            </label>
+          </div>
+          <p class="form-hint">Important dietary instructions to prevent adverse food-drug reactions.</p>
+          
+          <!-- Auto-suggest helper chip box -->
+          <div id="dietaryAutoSuggestBox" class="dietary-suggest-box" style="display: none;"></div>
+
+          <div class="dietary-chips-selector" id="dietaryChipsSelector">
+            <label class="dietary-chip-checkbox">
+              <input type="checkbox" value="Avoid Grapefruit & Juice">
+              <span class="chip-label"><i data-lucide="citrus"></i> Avoid Grapefruit</span>
+            </label>
+            <label class="dietary-chip-checkbox">
+              <input type="checkbox" value="Avoid Dairy / High Calcium (Milk, Yogurt)">
+              <span class="chip-label"><i data-lucide="milk"></i> Avoid Milk / Dairy</span>
+            </label>
+            <label class="dietary-chip-checkbox">
+              <input type="checkbox" value="Strict No Alcohol">
+              <span class="chip-label"><i data-lucide="wine-off"></i> Strict No Alcohol</span>
+            </label>
+            <label class="dietary-chip-checkbox">
+              <input type="checkbox" value="Avoid High Potassium / Bananas / Salt Substitutes">
+              <span class="chip-label"><i data-lucide="alert-circle"></i> Avoid High Potassium</span>
+            </label>
+            <label class="dietary-chip-checkbox">
+              <input type="checkbox" value="Drink Full Glass of Water & Stay Upright">
+              <span class="chip-label"><i data-lucide="glass-water"></i> Full Glass of Water</span>
+            </label>
+            <label class="dietary-chip-checkbox">
+              <input type="checkbox" value="Limit Caffeine & Energy Drinks">
+              <span class="chip-label"><i data-lucide="coffee"></i> Limit Caffeine</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Live Drug-Drug Conflict Alert Banner inside Medication Modal -->
+        <div id="modalConflictAlertBox" class="modal-conflict-box" style="display: none;"></div>
+
+        <!-- Inventory / Refill Tracking -->
+        <div class="form-row form-grid-2">
+          <div class="form-group">
+            <label for="currentStockInput" class="form-label">Current Stock Count</label>
+            <input type="number" id="currentStockInput" class="glass-input" min="0" value="30" placeholder="e.g., 30 pills">
+          </div>
+          <div class="form-group">
+            <label for="lowStockThresholdInput" class="form-label">Alert When Below (Refill Warning)</label>
+            <input type="number" id="lowStockThresholdInput" class="glass-input" min="1" value="5" placeholder="e.g., 5 pills">
+          </div>
+        </div>
+
+        <!-- Notes / Doctor prescription instructions -->
+        <div class="form-group">
+          <label for="medNotesInput" class="form-label">Prescription Notes / Doctor Advice</label>
+          <textarea id="medNotesInput" class="glass-textarea" rows="2" placeholder="e.g., Prescribed by Dr. Smith for 7 days. Drink plenty of water."></textarea>
+        </div>
+        </div><!-- /.modal-body-scroll -->
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger-soft delete-med-btn" id="deleteMedModalBtn" style="display: none; margin-right: auto;" data-id="" onclick="luminaApp.confirmDeleteMedication(document.getElementById('editMedId').value, event)">
+            <i data-lucide="trash-2"></i> Delete Medication
+          </button>
+          <button type="button" class="btn btn-ghost" id="resetMedFormBtn" style="display: none; margin-right: auto;">
+            <i data-lucide="rotate-ccw"></i> Clear Form
+          </button>
+          <button type="button" class="btn btn-ghost" id="cancelMedModalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary glow-btn">
+            <i data-lucide="check"></i> Save Medication
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       DELETE CONFIRMATION GLASSY DIALOG
+       Custom in-app modal that bypasses native browser popup blocking
+       ============================================== -->
+  <div id="deleteConfirmModalOverlay" class="modal-backdrop" style="display: none; z-index: 10500;">
+    <div class="modal-dialog glass-card" style="max-width: 440px; text-align: center; padding: 28px 24px;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.12); color: #dc2626; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; border: 1px solid rgba(239, 68, 68, 0.25);">
+        <i data-lucide="trash-2" style="width: 28px; height: 28px;"></i>
+      </div>
+      <h3 id="deleteConfirmTitle" style="font-size: 19px; font-weight: 700; margin-bottom: 8px;">Delete Medication?</h3>
+      <p id="deleteConfirmDesc" class="form-hint" style="font-size: 13.5px; line-height: 1.5; margin-bottom: 24px;">
+        Are you sure you want to permanently remove this medication? All scheduled alarms and doses will be deleted.
+      </p>
+      <div style="display: flex; gap: 12px; justify-content: center;">
+        <button type="button" class="btn btn-ghost" id="cancelDeleteConfirmBtn" onclick="luminaApp.closeDeleteConfirmModal()">
+          Cancel
+        </button>
+        <button type="button" class="btn btn-danger-glow" id="executeDeleteConfirmBtn" onclick="luminaApp.executePendingDelete()">
+          <i data-lucide="trash-2"></i> Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       ACTIVE ALARM FULLSCREEN GLASSY MODAL OVERLAY
+       ============================================== -->
+  <div id="alarmAlertOverlay" class="alarm-fullscreen-overlay" style="display: none;">
+    <div class="alarm-glass-card">
+      
+      <!-- Pulsing Rings -->
+      <div class="alarm-pulse-rings">
+        <div class="ring ring-1"></div>
+        <div class="ring ring-2"></div>
+        <div class="ring ring-3"></div>
+      </div>
+
+      <div class="alarm-bell-icon-pulse">
+        <i data-lucide="bell-ring"></i>
+      </div>
+
+      <div class="alarm-header-text">
+        <span class="alarm-tag-pill">TIME FOR YOUR MEDICINE</span>
+        <h2 id="alarmAlertMedName">Amoxicillin</h2>
+        <div class="alarm-dosage-badge" id="alarmAlertDosage">500 mg &bull; Tablet</div>
+      </div>
+
+      <div class="alarm-instruction-box glass-card">
+        <div class="instruction-row">
+          <i data-lucide="utensils"></i>
+          <span id="alarmAlertFood">Take after food</span>
+        </div>
+        <div class="instruction-row" id="alarmAlertNoteRow" style="display: none;">
+          <i data-lucide="info"></i>
+          <span id="alarmAlertNote">Prescribed for 7 days</span>
+        </div>
+        <div class="instruction-row alarm-dietary-row" id="alarmAlertDietaryRow" style="display: none;">
+          <i data-lucide="alert-triangle"></i>
+          <div id="alarmAlertDietaryPills" class="alarm-dietary-pills-wrap"></div>
+        </div>
+        <div class="instruction-row time-row">
+          <i data-lucide="clock"></i>
+          <span>Scheduled for: <strong id="alarmAlertTime">08:00 AM</strong></span>
+        </div>
+      </div>
+
+      <div class="alarm-action-buttons">
+        <button id="alarmTakeNowBtn" class="btn btn-success-glow btn-lg">
+          <i data-lucide="check-check"></i>
+          <span>Take Now</span>
+        </button>
+        
+        <div class="alarm-secondary-actions">
+          <button id="alarmSnoozeBtn" class="btn btn-glass-secondary">
+            <i data-lucide="alarm-clock-off"></i>
+            <span>Snooze (<span id="alarmSnoozeMinutes">10</span>m)</span>
+          </button>
+          <button id="alarmSkipBtn" class="btn btn-glass-secondary text-muted">
+            <i data-lucide="x"></i>
+            <span>Skip Dose</span>
+          </button>
+        </div>
+
+        <button type="button" id="alarmEmergencyBtn" class="btn btn-emergency-alert" onclick="luminaApp.openEmergencySosModal()">
+          <i data-lucide="phone-call"></i>
+          <span>Feeling Unwell? Call Doctor / Hospital</span>
+        </button>
+      </div>
+      
+      <p class="alarm-sound-indicator">
+        <i data-lucide="volume-2" class="icon-pulse"></i> Alarm is ringing &bull; Click 'Take Now' to confirm & stop alarm
+      </p>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       DOCTOR PRESCRIPTION / RECEIPT SCANNER MODAL
+       ============================================== -->
+  <div id="rxModalOverlay" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog glass-card rx-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge bg-blue">
+            <i data-lucide="scan-line"></i>
+          </div>
+          <div>
+            <h3>Scan Doctor's Medical Receipt</h3>
+            <p>Upload a clinic slip or prescription photo to automatically extract medicines & schedules</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="closeRxModalBtn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body-scroll">
+        <!-- 1. Drop Zone & Upload Options -->
+        <div id="rxUploadArea" class="rx-upload-dropzone">
+          <input type="file" id="rxFileInput" accept="image/*" style="display: none;">
+          
+          <div class="dropzone-content" id="rxDropzoneTrigger">
+            <div class="dropzone-icon">
+              <i data-lucide="upload-cloud"></i>
+            </div>
+            <h4>Upload Doctor Prescription Photo</h4>
+            <p class="dropzone-hint">Drag & drop your medical receipt or click to browse (JPG, PNG, WEBP)</p>
+            <span class="badge-tag">AI OCR & Medical Abbreviation Parser (OD, BD, TDS, 1-0-1)</span>
+          </div>
+
+          <div class="rx-demo-action-bar">
+            <span>Don't have a physical receipt handy?</span>
+            <button type="button" id="useSampleRxBtn" class="btn btn-primary btn-sm">
+              <i data-lucide="sparkles"></i> Try Sample Doctor's Receipt
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Scanning / Processing View (Laser Scan Effect) -->
+        <div id="rxScanningState" class="rx-scanning-container" style="display: none;">
+          <div class="rx-preview-frame">
+            <img id="rxPreviewImg" src="" alt="Prescription preview">
+            <div class="laser-scanner-line"></div>
+          </div>
+          
+          <div class="rx-progress-wrap">
+            <div class="rx-progress-status-row">
+              <span id="rxProgressStatusText">Scanning medical document...</span>
+              <span id="rxProgressPercentText" class="rx-percent-badge">0%</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="rxProgressBar" style="width: 0%;"></div>
+            </div>
+            <p class="form-hint">Analyzing clinic header, drug names, dosage strengths, and dosing intervals...</p>
+          </div>
+        </div>
+
+        <!-- 3. Extracted Medications Review Section -->
+        <div id="rxResultsSection" class="rx-results-wrapper" style="display: none;">
+          <div class="rx-results-header">
+            <div>
+              <h4 class="rx-results-title">
+                <i data-lucide="check-circle-2" style="color: var(--emerald); width: 20px; height: 20px;"></i>
+                Extracted Medications (<span id="detectedMedsCount">0</span> found)
+              </h4>
+              <p class="form-hint">Verify and adjust before adding to your cabinet & alarm schedules</p>
+            </div>
+            <button type="button" id="toggleRawTextBtn" class="btn-text-action">
+              <i data-lucide="file-text"></i> View OCR Text
+            </button>
+          </div>
+
+          <!-- Raw text toggle box -->
+          <div id="rawTextContainer" class="raw-text-box glass-card" style="display: none; margin-bottom: 16px; padding: 14px;">
+            <label class="form-label">OCR Transcription (Editable):</label>
+            <textarea id="rawExtractedTextarea" class="glass-textarea" rows="4"></textarea>
+            <button type="button" id="reparseRawTextBtn" class="btn btn-glass-secondary btn-sm" style="margin-top: 8px;">
+              <i data-lucide="refresh-cw"></i> Re-parse Text
+            </button>
+          </div>
+
+          <!-- List of Detected Medicine Review Cards -->
+          <div id="detectedMedsList" class="detected-meds-grid">
+            <!-- Dynamically populated review cards -->
+          </div>
+
+          <div class="rx-results-actions" style="display: flex; gap: 10px; margin-top: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+            <button type="button" id="addManualRxMedBtn" class="btn-text-action">
+              <i data-lucide="plus"></i> Add Another Medicine to this list
+            </button>
+            <button type="button" id="clearAllRxMedsBtn" class="btn btn-ghost-danger btn-sm">
+              <i data-lucide="trash-2"></i> Clear All Extracted Medicines
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelRxModalBtn">Cancel</button>
+        <button type="button" class="btn btn-glass-secondary" id="rescanRxBtn" style="display: none;">
+          <i data-lucide="rotate-ccw"></i> Scan Another
+        </button>
+        <button type="button" class="btn btn-primary glow-btn" id="importMedsBtn" style="display: none;">
+          <i data-lucide="check-check"></i>
+          <span>Import Selected (<span id="selectedMedsCount">0</span>) to Schedule</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- REFILL QUICK MODAL -->
+  <div id="refillModalOverlay" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog glass-card" style="max-width: 440px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge bg-amber">
+            <i data-lucide="package-plus"></i>
+          </div>
+          <div>
+            <h3>Refill Stock</h3>
+            <p id="refillMedName">Medicine Name</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="closeRefillModalBtn">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="form-hint" style="margin-bottom: 15px;">Add pills or bottles to replenish inventory.</p>
+        <div class="form-group">
+          <label class="form-label">Add Quantity</label>
+          <div class="refill-btn-row">
+            <button type="button" class="btn btn-glass-secondary refill-quick-add" data-add="10">+10</button>
+            <button type="button" class="btn btn-glass-secondary refill-quick-add" data-add="30">+30</button>
+            <button type="button" class="btn btn-glass-secondary refill-quick-add" data-add="60">+60</button>
+            <button type="button" class="btn btn-glass-secondary refill-quick-add" data-add="100">+100</button>
+          </div>
+          <input type="number" id="customRefillInput" class="glass-input" style="margin-top: 12px;" min="1" value="30">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelRefillModalBtn">Cancel</button>
+        <button type="button" id="confirmRefillBtn" class="btn btn-primary glow-btn">
+          <i data-lucide="check"></i> Confirm Refill
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       ADD / EDIT EMERGENCY CONTACT & DOCTOR MODAL
+       ============================================== -->
+  <div id="contactModalOverlay" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog glass-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge" style="background: rgba(225, 29, 72, 0.12); color: var(--rose);" id="contactModalIcon">
+            <i data-lucide="user-plus"></i>
+          </div>
+          <div>
+            <h3 id="contactModalTitle">Add Emergency Contact</h3>
+            <p>Add personal doctors, hospital emergency desks, or family caregivers</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="closeContactModalBtn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="contactForm" class="modal-form-wrap">
+        <div class="modal-body-scroll">
+        <input type="hidden" id="editContactId" value="">
+
+        <div class="form-group">
+          <label for="contactNameInput" class="form-label required">Contact / Doctor / Hospital Name</label>
+          <input type="text" id="contactNameInput" class="glass-input" placeholder="e.g. Dr. Robert Vance, City Hospital ER, Sarah (Daughter)" required>
+        </div>
+
+        <div class="form-row form-grid-2">
+          <div class="form-group">
+            <label for="contactRoleSelect" class="form-label required">Relationship / Role</label>
+            <select id="contactRoleSelect" class="glass-select">
+              <option value="doctor">🩺 Personal Doctor</option>
+              <option value="hospital">🏥 Hospital / Emergency Dept</option>
+              <option value="caregiver">🧑‍⚕️ Primary Caregiver / Nurse</option>
+              <option value="family" selected>👨‍👩‍👧 Family Member</option>
+              <option value="friend">🤝 Neighbor / Friend</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="contactHospitalInput" class="form-label">Clinic / Hospital Name (Optional)</label>
+            <input type="text" id="contactHospitalInput" class="glass-input" placeholder="e.g. Apollo Health, Mayo Clinic">
+          </div>
+        </div>
+
+        <div class="form-row form-grid-2">
+          <div class="form-group">
+            <label for="contactPhoneInput" class="form-label required">Phone Number (with Country Code)</label>
+            <input type="tel" id="contactPhoneInput" class="glass-input" placeholder="e.g. +1 555-0199 or +91 9876543210" required>
+            <span class="form-hint">Used for 1-tap call and WhatsApp missed-dose alerts</span>
+          </div>
+          <div class="form-group">
+            <label for="contactEmailInput" class="form-label">Email Address (Optional)</label>
+            <input type="email" id="contactEmailInput" class="glass-input" placeholder="e.g. doctor@clinic.com">
+          </div>
+        </div>
+
+        <div class="toggle-setting-row" style="padding: 12px 0;">
+          <div>
+            <strong>Automated Missed Dose Alerts</strong>
+            <p>Generate WhatsApp/SMS alert links if medications are missed</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="contactNotifyMissedToggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="toggle-setting-row" style="padding: 12px 0;">
+          <div>
+            <strong>Primary SOS Fast-Dial Contact</strong>
+            <p>Place prominently on top of the 1-tap Emergency SOS dialog</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="contactPrimarySosToggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-top: 10px;">
+          <label for="contactNotesInput" class="form-label">Medical Notes / Clinic Hours (Optional)</label>
+          <input type="text" id="contactNotesInput" class="glass-input" placeholder="e.g. On-call 24/7, Cardiologist, Room 302">
+        </div>
+
+        </div><!-- /.modal-body-scroll -->
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="cancelContactModalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary glow-btn">
+            <i data-lucide="check"></i> Save Contact
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       RAPID EMERGENCY SOS & DOCTOR DIAL MODAL
+       ============================================== -->
+  <div id="emergencySosModalOverlay" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog glass-card sos-modal-dialog">
+      <div class="modal-header sos-modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge bg-rose-emergency">
+            <i data-lucide="phone-call" class="icon-pulse"></i>
+          </div>
+          <div>
+            <h3 style="color: var(--rose);">Immediate Emergency SOS & Doctor Dial</h3>
+            <p>Instant 1-tap direct calling and emergency caregiver broadcast</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="closeEmergencySosBtn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body-scroll">
+        <!-- Patient Identity Banner in SOS Modal -->
+        <div class="sos-patient-banner glass-card" id="sosPatientBanner">
+          <div class="sos-patient-avatar" id="sosPatientAvatar">AJ</div>
+          <div class="sos-patient-info">
+            <div class="sos-patient-name-row">
+              <h4 id="sosPatientName">Alex Johnson</h4>
+              <span class="sos-blood-pill" id="sosPatientBlood">🩸 O+</span>
+            </div>
+            <p id="sosPatientAllergies">Allergies: None known &bull; Conditions: None</p>
+          </div>
+          <button type="button" class="btn btn-sm btn-glass-secondary" onclick="luminaApp.closeEmergencySosModal(); luminaApp.openPatientProfileModal();" title="View Patient Health Card">
+            <i data-lucide="id-card"></i> Card
+          </button>
+        </div>
+
+        <!-- Quick Emergency Broadcast Card -->
+        <div class="sos-broadcast-card glass-card">
+          <div class="sos-broadcast-text">
+            <h4>🚨 Emergency Doctor & Caregiver Broadcast</h4>
+            <p>Send instant clinical alerts with your patient details, allergies, and active medications.</p>
+          </div>
+          <div class="sos-actions-dual-row">
+            <button type="button" id="broadcastCaregiverSosBtn" class="btn btn-whatsapp-broadcast" onclick="luminaApp.broadcastEmergencyWhatsApp()">
+              <i data-lucide="send"></i>
+              <span>Send SOS to Caregivers</span>
+            </button>
+            <button type="button" id="sendDocReportSosBtn" class="btn btn-glass-secondary" onclick="luminaApp.sendClinicalSummaryToDoctor()">
+              <i data-lucide="stethoscope"></i>
+              <span>Send Record to Doctor</span>
+            </button>
+          </div>
+        </div>
+
+        <h4 class="sos-section-label">Emergency Contacts & Doctors</h4>
+        <div id="sosContactsList" class="sos-contacts-list">
+          <!-- Dynamically populated 1-tap call buttons -->
+        </div>
+
+        <div class="sos-fallback-box glass-card">
+          <i data-lucide="info"></i>
+          <span>In a life-threatening medical emergency, call your local ambulance service (<strong>911 / 112 / 108 / 999</strong>) immediately.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       LOG VITALS & CLINICAL HEALTH MODAL
+       ============================================== -->
+  <div id="vitalsModalOverlay" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog glass-card vitals-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge bg-indigo" id="vitalsModalIcon">
+            <i data-lucide="activity"></i>
+          </div>
+          <div>
+            <h3 id="vitalsModalTitle">Log Vital Sign Reading</h3>
+            <p>Track your health indicators with automatic AHA & ADA categorization</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="closeVitalsModalBtn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="vitalsForm" class="modal-form-wrap">
+        <div class="modal-body-scroll">
+        <!-- Metric Type Selector -->
+        <div class="form-group">
+          <label class="form-label required">Select Vital Metric</label>
+          <div class="vitals-type-selector" id="vitalTypeSelector">
+            <button type="button" class="vitals-pill-btn active" data-vital-type="bp">
+              <i data-lucide="heart"></i> Blood Pressure
+            </button>
+            <button type="button" class="vitals-pill-btn" data-vital-type="glucose">
+              <i data-lucide="droplet"></i> Blood Glucose
+            </button>
+            <button type="button" class="vitals-pill-btn" data-vital-type="pulse">
+              <i data-lucide="activity"></i> Heart Rate (Pulse)
+            </button>
+            <button type="button" class="vitals-pill-btn" data-vital-type="temperature">
+              <i data-lucide="thermometer"></i> Temperature
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Inputs: Blood Pressure -->
+        <div id="vitalInputGroupBP" class="vital-inputs-block">
+          <div class="form-row form-grid-2">
+            <div class="form-group">
+              <label for="vitalSystolicInput" class="form-label required">Systolic (Upper)</label>
+              <div class="input-with-unit">
+                <input type="number" id="vitalSystolicInput" class="glass-input" placeholder="120" min="60" max="260">
+                <span class="input-unit-tag">mmHg</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="vitalDiastolicInput" class="form-label required">Diastolic (Lower)</label>
+              <div class="input-with-unit">
+                <input type="number" id="vitalDiastolicInput" class="glass-input" placeholder="80" min="40" max="160">
+                <span class="input-unit-tag">mmHg</span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="vitalBPPulseInput" class="form-label">Heart Rate / Pulse (Optional)</label>
+            <div class="input-with-unit">
+              <input type="number" id="vitalBPPulseInput" class="glass-input" placeholder="72" min="30" max="220">
+              <span class="input-unit-tag">bpm</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Inputs: Blood Glucose -->
+        <div id="vitalInputGroupGlucose" class="vital-inputs-block" style="display: none;">
+          <div class="form-row form-grid-2">
+            <div class="form-group">
+              <label for="vitalGlucoseInput" class="form-label required">Glucose Level</label>
+              <div class="input-with-unit">
+                <input type="number" id="vitalGlucoseInput" class="glass-input" placeholder="95" min="20" max="600">
+                <span class="input-unit-tag">mg/dL</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="vitalGlucoseContext" class="form-label">Timing / Context</label>
+              <select id="vitalGlucoseContext" class="glass-select">
+                <option value="fasting" selected>Fasting (Morning before meal)</option>
+                <option value="post_meal">Post-Meal (2 hrs after eating)</option>
+                <option value="random">Random / As needed</option>
+                <option value="bedtime">Before Bedtime</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Inputs: Heart Rate / Pulse -->
+        <div id="vitalInputGroupPulse" class="vital-inputs-block" style="display: none;">
+          <div class="form-row form-grid-2">
+            <div class="form-group">
+              <label for="vitalPulseInput" class="form-label required">Pulse Rate</label>
+              <div class="input-with-unit">
+                <input type="number" id="vitalPulseInput" class="glass-input" placeholder="72" min="30" max="220">
+                <span class="input-unit-tag">bpm</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="vitalPulseContext" class="form-label">Measurement State</label>
+              <select id="vitalPulseContext" class="glass-select">
+                <option value="resting" selected>At Rest (Seated)</option>
+                <option value="post_exercise">Post-Exercise / Walking</option>
+                <option value="morning">Morning on waking</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Inputs: Body Temperature -->
+        <div id="vitalInputGroupTemp" class="vital-inputs-block" style="display: none;">
+          <div class="form-row form-grid-2">
+            <div class="form-group">
+              <label for="vitalTempInput" class="form-label required">Temperature</label>
+              <div class="input-with-unit">
+                <input type="number" step="0.1" id="vitalTempInput" class="glass-input" placeholder="98.6" min="90" max="110">
+                <span class="input-unit-tag">°F</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="vitalTempSite" class="form-label">Measurement Method</label>
+              <select id="vitalTempSite" class="glass-select">
+                <option value="oral" selected>Oral (Mouth)</option>
+                <option value="forehead">Forehead / Infrared</option>
+                <option value="ear">Tympanic (Ear)</option>
+                <option value="axillary">Axillary (Armpit)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Instant Clinical Classification Preview -->
+        <div id="vitalsLivePreviewBox" class="vitals-preview-box glass-card">
+          <div class="preview-badge-row">
+            <span class="preview-caption">Clinical Assessment:</span>
+            <span id="vitalsPreviewBadge" class="vital-badge badge-green">Optimal / Normal</span>
+          </div>
+          <p id="vitalsPreviewAdvice" class="preview-advice-text">Normal cardiovascular target range.</p>
+        </div>
+
+        <!-- Notes -->
+        <div class="form-group">
+          <label for="vitalNotesInput" class="form-label">Reading Notes / Symptoms (Optional)</label>
+          <input type="text" id="vitalNotesInput" class="glass-input" placeholder="e.g., Felt calm, took after 10 mins rest">
+        </div>
+        </div><!-- /.modal-body-scroll -->
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" id="cancelVitalsModalBtn">Cancel</button>
+          <button type="submit" class="btn btn-primary glow-btn">
+            <i data-lucide="check"></i> Save Vitals Reading
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       DRUG-DRUG INTERACTIONS & CLINICAL SAFETY HUB MODAL
+       ============================================== -->
+  <div id="interactionsModalOverlay" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog glass-card interactions-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge bg-emerald" id="modalSafetyIconBox">
+            <i data-lucide="shield-check" id="modalSafetyIcon"></i>
+          </div>
+          <div>
+            <h3>Clinical Drug Interaction & Safety Hub</h3>
+            <p>Real-time pharmacology conflict detection & dietary contraindications</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="closeInteractionsModalBtn" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body-scroll">
+        <!-- Interactive Hub Sub-Navigation -->
+        <div class="safety-hub-tabs">
+          <button type="button" class="safety-tab-btn active" data-safety-tab="safety-cabinet">
+            <i data-lucide="archive"></i> My Cabinet Scan (<span id="cabinetScanCount">0</span>)
+          </button>
+          <button type="button" class="safety-tab-btn" data-safety-tab="safety-checker">
+            <i data-lucide="git-compare"></i> Check Any 2 Drugs
+          </button>
+          <button type="button" class="safety-tab-btn" data-safety-tab="safety-dietary">
+            <i data-lucide="utensils"></i> Food & Substance Warnings
+          </button>
+        </div>
+
+        <!-- SUB-TAB 1: Active Cabinet Scan -->
+        <div id="safety-cabinet" class="safety-tab-content active">
+          <div class="scan-summary-banner" id="cabinetScanBanner">
+            <div class="banner-icon">
+              <i data-lucide="check-circle-2" class="text-emerald"></i>
+            </div>
+            <div>
+              <h4 id="cabinetScanTitle">No Drug-Drug Conflicts Detected</h4>
+              <p id="cabinetScanSub">All medications in your active cabinet can be taken safely according to clinical pharmacology guidelines.</p>
+            </div>
+          </div>
+
+          <div id="activeInteractionsList" class="interactions-cards-list">
+            <!-- Dynamically populated interaction cards -->
+          </div>
+        </div>
+
+        <!-- SUB-TAB 2: Check Any 2 Drugs Sandbox -->
+        <div id="safety-checker" class="safety-tab-content" style="display: none;">
+          <div class="checker-intro-box glass-card">
+            <h4>Check for Potential Interactions</h4>
+            <p>Enter any two medication names to verify clinical safety before taking them together.</p>
+            
+            <div class="checker-inputs-grid">
+              <div class="form-group">
+                <label class="form-label">Medication 1</label>
+                <input type="text" id="sandboxDrug1" class="glass-input" placeholder="e.g., Warfarin, Lisinopril, Metformin">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Medication 2</label>
+                <input type="text" id="sandboxDrug2" class="glass-input" placeholder="e.g., Aspirin, Spironolactone, Alcohol">
+              </div>
+            </div>
+
+            <div class="checker-actions-row">
+              <button type="button" id="runSandboxCheckBtn" class="btn btn-primary btn-sm glow-btn">
+                <i data-lucide="search"></i> Check Interactions
+              </button>
+              <div class="quick-test-pills">
+                <span class="subtext">Quick test:</span>
+                <button type="button" class="quick-pair-btn" data-pair="Warfarin,Aspirin">Warfarin + Aspirin</button>
+                <button type="button" class="quick-pair-btn" data-pair="Lisinopril,Spironolactone">Lisinopril + Spironolactone</button>
+                <button type="button" class="quick-pair-btn" data-pair="Atorvastatin,Clarithromycin">Atorvastatin + Clarithromycin</button>
+                <button type="button" class="quick-pair-btn" data-pair="Metformin,Alcohol">Metformin + Alcohol</button>
+              </div>
+            </div>
+
+            <div id="sandboxResultBox" class="sandbox-result-box" style="display: none;"></div>
+          </div>
+        </div>
+
+        <!-- SUB-TAB 3: Food & Substance Warnings Reference -->
+        <div id="safety-dietary" class="safety-tab-content" style="display: none;">
+          <div class="dietary-guide-grid">
+            <div class="dietary-guide-card glass-card">
+              <div class="guide-card-header text-amber">
+                <i data-lucide="citrus"></i>
+                <h4>Grapefruit & Citrus Juice</h4>
+              </div>
+              <p>Inhibits the CYP3A4 enzyme in intestines, causing high systemic absorption of statins (Atorvastatin, Simvastatin) and calcium channel blockers (Amlodipine).</p>
+              <span class="guide-tag">Risk: Statin toxicity, muscle breakdown (rhabdomyolysis)</span>
+            </div>
+
+            <div class="dietary-guide-card glass-card">
+              <div class="guide-card-header text-blue">
+                <i data-lucide="milk"></i>
+                <h4>Dairy & High Calcium (Milk, Yogurt)</h4>
+              </div>
+              <p>Calcium chelates with antibiotics such as Doxycycline, Tetracycline, Ciprofloxacin, and Levofloxacin, blocking intestinal absorption.</p>
+              <span class="guide-tag">Risk: Antibiotic treatment failure (Space by 2-4 hours)</span>
+            </div>
+
+            <div class="dietary-guide-card glass-card">
+              <div class="guide-card-header text-rose">
+                <i data-lucide="wine-off"></i>
+                <h4>Alcohol & Ethanol</h4>
+              </div>
+              <p>Additive central nervous system depression with sedatives/opioids, severe liver toxicity with Paracetamol, and violent disulfiram-like vomiting with Metronidazole.</p>
+              <span class="guide-tag">Risk: Severe CNS depression, hepatotoxicity, acute vomiting</span>
+            </div>
+
+            <div class="dietary-guide-card glass-card">
+              <div class="guide-card-header text-emerald">
+                <i data-lucide="alert-circle"></i>
+                <h4>High Potassium & Bananas / Salt Substitutes</h4>
+              </div>
+              <p>ACE inhibitors (Lisinopril, Ramipril) and Potassium-sparing diuretics (Spironolactone) reduce potassium urinary excretion.</p>
+              <span class="guide-tag">Risk: Fatal cardiac arrhythmias from hyperkalemia</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       PATIENT PROFILE & DOCTOR SHARING MODAL
+       ============================================== -->
+  <div id="patientProfileModalOverlay" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog glass-card patient-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge bg-emerald" id="patientModalAvatarBadge">
+            <i data-lucide="user-check"></i>
+          </div>
+          <div>
+            <h3 id="patientModalTitle">Patient Medical Identity Card</h3>
+            <p>Verified Clinical Profile & Doctor Sharing Hub</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" id="closePatientProfileBtn" onclick="luminaApp.closePatientProfileModal()" aria-label="Close modal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body-scroll">
+        <!-- Patient Medical Identity Card Display -->
+        <div class="patient-id-card glass-card">
+          <div class="id-card-top">
+            <div class="id-card-avatar" id="idCardAvatar">AJ</div>
+            <div class="id-card-main-meta">
+              <h3 id="idCardFullName">Alex Johnson</h3>
+              <div class="id-card-tags">
+                <span class="id-tag-blood" id="idCardBloodGroup">🩸 Blood Group: O+</span>
+                <span class="id-tag-age" id="idCardAgeGender">42 yrs &bull; Male</span>
+                <span class="id-tag-auth" id="idCardAuthProvider"><i data-lucide="shield-check"></i> Verified</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="id-card-grid">
+            <div class="id-item">
+              <span class="id-label"><i data-lucide="phone"></i> Primary Phone:</span>
+              <strong id="idCardPhone">+91 98765 43210</strong>
+            </div>
+            <div class="id-item">
+              <span class="id-label"><i data-lucide="mail"></i> Email Address:</span>
+              <strong id="idCardEmail">alex.johnson@healthmail.com</strong>
+            </div>
+            <div class="id-item alert-box-red">
+              <span class="id-label"><i data-lucide="alert-triangle"></i> Drug Allergies:</span>
+              <strong id="idCardAllergies" style="color: var(--rose);">Penicillin, Aspirin</strong>
+            </div>
+            <div class="id-item alert-box-blue">
+              <span class="id-label"><i data-lucide="heart-pulse"></i> Chronic Conditions:</span>
+              <strong id="idCardConditions">Hypertension, High Cholesterol</strong>
+            </div>
+            <div class="id-item">
+              <span class="id-label"><i data-lucide="stethoscope"></i> Primary Doctor:</span>
+              <strong id="idCardDoctor">Dr. Robert Chen &bull; City General Clinic</strong>
+            </div>
+            <div class="id-item">
+              <span class="id-label"><i data-lucide="users"></i> Emergency Contact:</span>
+              <strong id="idCardEmergency">Emma Johnson (Spouse) &bull; +91 98765 67890</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Doctor Sharing Action Box -->
+        <div class="doctor-share-action-card glass-card">
+          <div class="doctor-share-icon">
+            <i data-lucide="message-square"></i>
+          </div>
+          <div class="doctor-share-info">
+            <h4>Send Clinical Health Record to Doctor</h4>
+            <p>Generates an accurate clinical summary (Patient identity, blood group, drug allergies, active medicines, dosages, and adherence status) and prepares it directly for WhatsApp transmission to your doctor.</p>
+          </div>
+          <button type="button" class="btn btn-whatsapp-broadcast" onclick="luminaApp.sendClinicalSummaryToDoctor()">
+            <i data-lucide="send"></i>
+            <span>Send to Doctor via WhatsApp</span>
+          </button>
+        </div>
+
+        <!-- Modal Actions Footer -->
+        <div class="patient-modal-footer">
+          <button type="button" class="btn btn-glass-secondary" onclick="luminaApp.editPatientProfile()">
+            <i data-lucide="edit-3"></i> Edit Medical Card
+          </button>
+          <button type="button" class="btn btn-ghost text-danger" onclick="luminaApp.confirmLogoutPatient()">
+            <i data-lucide="log-out"></i> Switch Patient / Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==============================================
+       DOCTOR APPOINTMENT & LAB TEST MODAL
+       ============================================== -->
+  <div id="appointmentModalOverlay" class="modal-backdrop" style="display: none;">
+    <div class="modal-dialog glass-card appointment-modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-badge bg-blue">
+            <i data-lucide="calendar-plus"></i>
+          </div>
+          <div>
+            <h3 id="appointmentModalTitle">Schedule Doctor Consultation / Lab Test</h3>
+            <p>Record medical visit date, clinic location, and clinical preparation notes</p>
+          </div>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="luminaApp.closeAppointmentModal()">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <form id="appointmentForm" class="modal-form-wrap" onsubmit="event.preventDefault(); luminaApp.handleAppointmentFormSubmit();">
+        <div class="modal-body-scroll">
+          <input type="hidden" id="editAppointmentId" value="">
+
+          <!-- Doctor & Specialty -->
+          <div class="form-row form-grid-2">
+            <div class="form-group">
+              <label for="apptDoctorNameInput" class="form-label required">Doctor / Healthcare Provider</label>
+              <input type="text" id="apptDoctorNameInput" class="glass-input" placeholder="e.g. Dr. Robert Chen" required>
+            </div>
+            <div class="form-group">
+              <label for="apptSpecialtyInput" class="form-label required">Medical Specialty</label>
+              <select id="apptSpecialtyInput" class="glass-select" required>
+                <option value="Cardiologist" selected>Cardiologist (Heart & Blood Pressure)</option>
+                <option value="General Physician">General Physician / Primary Care</option>
+                <option value="Endocrinologist">Endocrinologist (Diabetes & Metabolism)</option>
+                <option value="Pulmonologist">Pulmonologist (Lungs & Asthma)</option>
+                <option value="Nephrologist">Nephrologist (Kidneys)</option>
+                <option value="Pathology Lab">Pathology / Blood Diagnostic Lab</option>
+                <option value="Other Specialist">Other Medical Specialist</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Clinic / Hospital & Type -->
+          <div class="form-row form-grid-2">
+            <div class="form-group">
+              <label for="apptClinicInput" class="form-label required">Hospital / Clinic / Diagnostic Center</label>
+              <input type="text" id="apptClinicInput" class="glass-input" placeholder="e.g. Metro Heart Clinic, Suite 304" required>
+            </div>
+            <div class="form-group">
+              <label for="apptTypeSelect" class="form-label required">Consultation Format</label>
+              <select id="apptTypeSelect" class="glass-select" required>
+                <option value="In-Person Visit" selected>🏥 In-Person Hospital / Clinic Visit</option>
+                <option value="Lab Blood Test">🧪 Fasting Blood / Diagnostic Lab Test</option>
+                <option value="Telehealth Video">📱 Telehealth Video Consultation</option>
+                <option value="Follow-Up Review">📋 Prescription Follow-up Review</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Date & Time -->
+          <div class="form-row form-grid-2">
+            <div class="form-group">
+              <label for="apptDateInput" class="form-label required">Appointment Date</label>
+              <input type="date" id="apptDateInput" class="glass-input" required>
+            </div>
+            <div class="form-group">
+              <label for="apptTimeInput" class="form-label required">Appointment Time</label>
+              <input type="time" id="apptTimeInput" class="glass-input" value="10:30" required>
+            </div>
+          </div>
+
+          <!-- Doctor Phone / WhatsApp for confirmation -->
+          <div class="form-group">
+            <label for="apptPhoneInput" class="form-label">Doctor / Clinic WhatsApp Number (for one-tap confirmation)</label>
+            <input type="tel" id="apptPhoneInput" class="glass-input" placeholder="e.g. +91 98765 43210">
+          </div>
+
+          <!-- Reason / Fasting Instructions -->
+          <div class="form-group">
+            <label for="apptNotesInput" class="form-label">Reason for Visit & Preparation Instructions</label>
+            <textarea id="apptNotesInput" class="glass-textarea" rows="2" placeholder="e.g. 3-Month HbA1c review & ECG test. Must be fasting for 10 hours before test."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ghost" onclick="luminaApp.closeAppointmentModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary glow-btn">
+            <i data-lucide="calendar-check"></i>
+            <span id="apptSubmitBtnText">Save Appointment</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Tesseract.js OCR for in-browser client-side medical receipt reading -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  
+  <!-- Core Scripts with Cache Buster -->
+  <script src="audio.js?v=26"></script>
+  <script src="rxParser.js?v=26"></script>
+  <script src="interactions.js?v=26"></script>
+  <script src="vitals.js?v=26"></script>
+  <script src="app.js?v=26"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "LuminaMed - Medicine Reminder & Health Tracker",
+  "short_name": "LuminaMed",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f1f5fd",
+  "theme_color": "#2563eb",
+  "description": "Smart Medicine Reminder & Precision Audio Alarm with Health Tracking",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
